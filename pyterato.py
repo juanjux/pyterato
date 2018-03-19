@@ -2,25 +2,22 @@
 
 from pprint import pprint
 from time import sleep
+from collections import OrderedDict
 
 import uno
 from unotools import Socket, connect
 from unotools.component.writer import Writer
 
-# Checks:
-# 1. Using words finished in "-mente" more than once every two paragraphs.
-# 2. Using pedantic say-words in dialogs.
-# 3. Using the basic say-words "dijo" and "preguntó" too much in dialogs.
-# 4. Repeating very similar words too closely.
-
 # TODO:
 # - Show the results in LibreOffice
 # - Factorize the looping over old words so it's only done once for every new word
 #   (checking if the index applies for every check).
-# - Agregate all the reports by sections.
 # - Add explanation and examples of bad/good usage for usually missused saywords.
-# - Detect dialogs.
+# - Detect dialogs, check saywords online in them.
 # - Detect saywords conjugations.
+# - Run the checks from a list.
+# - Print page number of the findings
+# - Check contained: normalize accents
 
 COMMON_WORDS = {
         "el", "él", "lo", "la", "le", "los", "las", "que", "qué", "cual", "cuál",
@@ -57,10 +54,12 @@ def initialize():
 
 
 class WordIterator:
-    def __init__(self, text):
+    def __init__(self, text, controller):
+        self.text = text
+        self.controller = controller
         self.cursor = text.createTextCursor()
         self.cursor.gotoStart(False)
-        self.text = text
+        self.view_cursor = self.controller.getViewCursor()
         self.prev_words = []
 
     def __iter__(self):
@@ -68,12 +67,24 @@ class WordIterator:
 
     def __next__(self):
         self.cursor.gotoEndOfWord(True)
+        self.view_cursor.gotoRange(self.cursor, False)
+        page = self.view_cursor.getPage()
         word = ''.join(e for e in self.cursor.String.lower() if e.isalnum())
 
         self.prev_words.append(word)
         if not self.cursor.gotoNextWord(False):
             raise StopIteration
-        return word
+        return word, page
+
+class MenteFind:
+    def __init__(self, word, oldword, idx):
+        self.word = word
+        self.oldword = oldword
+        self.idx = idx
+
+    def __str__(self):
+        return 'Repetición de palabra con sufijo mente ("%s") %d palabras atrás: %s' %\
+                (self.word, self.idx, self.oldword)
 
 
 def check_mente(word, words):
@@ -81,37 +92,49 @@ def check_mente(word, words):
     if word != 'mente' and word.endswith('mente'):
         for idx, oldword in enumerate(reversed(words[-check_mente.oldwords:-1])):
             if oldword != 'mente' and oldword.endswith('mente'):
-                findings.append((oldword, idx))
+                # findings.append((oldword, idx))
+                findings.append(MenteFind(word, oldword, idx))
 
-    if findings:
-        print('Repetición de palabras con sufijo -mente desde "%s":' % word)
-        for f in findings:
-            print('\t%s, %d palabras detrás' % f)
-        print()
+    return findings
 check_mente.oldwords = 100
 
+class RepetitionFind:
+    def __init__(self, word, idx):
+        self.word = word
+        self.idx = idx
+
+    def __str__(self):
+        return 'Repetición de palabra "%s" %d palabras atrás' %\
+                (self.word, self.idx)
 
 def check_repetition(word, words):
     # FIXME: search for approximate words or words containing this too
     if word in COMMON_WORDS:
-        return
+        return []
 
     findings = []
     for idx, oldword in enumerate(reversed(words[-check_repetition.oldwords:-1])):
         if oldword == word:
-            findings.append(idx)
+            # findings.append(idx)
+            findings.append(RepetitionFind(word, idx))
 
-    if findings:
-        print('Repetición de palabras desde "%s":' % word)
-        for f in findings:
-            print('\t- %d palabras detrás' % f)
-        print()
+    return findings
 check_repetition.oldwords = 50
 
 
+class ContainedFind:
+    def __init__(self, word, oldword, idx):
+        self.word = word
+        self.oldword = oldword
+        self.idx = idx
+
+    def __str__(self):
+        return 'Repetición de palabra contenida "%s" %d palabaras atrás: %s' %\
+                (self.word, self.idx, self.oldword)
+
 def check_contained(word, words):
     if word in COMMON_WORDS:
-        return
+        return []
 
     findings = []
     for idx, oldword in enumerate(reversed(words[-check_contained.oldwords:-1])):
@@ -120,40 +143,78 @@ def check_contained(word, words):
 
         if oldword and not oldword.endswith('mente') and oldword != word:
             if word in oldword or oldword in word:
-                findings.append((oldword, idx))
+                findings.append(ContainedFind(word, oldword, idx))
 
-    if findings:
-        print('Repetición de palabras continentes desde "%s":' % word)
-        for f in findings:
-            print('\t- "%s", %d palabras detrás' % f)
-        print()
+    return findings
 check_contained.oldwords = 15
 
 
+class PedanticSayFind:
+    def __init__(self, word):
+        self.word = word
+
+    def __str__(self):
+        return 'Verbo generalmente pedante en diálogos: %s' % self.word
+
+class MisusedSayFind:
+    def __init__(self, word):
+        self.word = word
+
+    def __str__(self):
+        return 'Verbo generalmente mal usado en diálogos: %s' % self.word
+
 def check_saywords(word):
+    findings = []
+
     if word in USUALLY_PEDANTIC_SAYWORDS:
-        print('Verbo generalmente pedante si se usa en diálogos: ', word)
+        # findings.append(word)
+        findings.append(PedanticSayFind(word))
+        # print('Verbo generalmente pedante si se usa en diálogos: ', word)
 
     if word in USUALLY_MISUSED_SAYWORDS:
-        print('Verbo generalmente mal utilizado en diálogos: ', word)
+        findings.append(MisusedSayFind(word))
+        # findings.append(word)
+        # print('Verbo generalmente mal utilizado en diálogos: ', word)
 
+    return findings
 
-ENABLED_CHECKS = (check_mente, check_repetition)
+def print_results(findings):
+    for page in findings:
+        print('Página %d: ' % page)
+        flist = findings[page]
+        for typefindings in flist:
+            for f in typefindings:
+                print(f)
+
+        print()
+
 
 def main():
     desktop = initialize()
     model = desktop.getCurrentComponent()
     text = model.Text
-    words = WordIterator(text)
+    controller = model.getCurrentController()
+    words = WordIterator(text, controller)
+    findings = OrderedDict()
 
-    for word in words:
+    for word, page in words:
+        tmpfindings = []
         if not word:
             continue
 
-        check_mente(word, words.prev_words)
-        check_repetition(word, words.prev_words)
-        check_contained(word, words.prev_words)
-        check_saywords(word)
+        if page not in findings:
+            findings[page] = []
+
+        tmpfindings.append(check_mente(word, words.prev_words))
+        tmpfindings.append(check_repetition(word, words.prev_words))
+        tmpfindings.append(check_contained(word, words.prev_words))
+        tmpfindings.append(check_saywords(word))
+
+        for f in tmpfindings:
+            if len(f):
+                findings[page].append(f)
+
+    print_results(findings)
 
 if __name__ == '__main__':
     main()
