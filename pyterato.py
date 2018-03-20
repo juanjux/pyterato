@@ -18,6 +18,10 @@ from unotools.component.writer import Writer
 # - Run the checks from a list.
 # - Print page number of the findings
 # - Check contained: normalize accents
+# - Check: misused/abused expressions ("perlaban la frente", "sacudir la cabeza").
+# - Check: commonly misused and abused verbs (detect verb roots) (espetar, mascullar,
+#          perlar, empalidecer).
+# - Check: intransitive verbs used as transitive (tamborilear).
 
 COMMON_WORDS = {
         "el", "él", "lo", "la", "le", "los", "las", "que", "qué", "cual", "cuál",
