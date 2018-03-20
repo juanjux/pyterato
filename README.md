@@ -1,11 +1,11 @@
 (Spanish language, since this script is intended for writers in it).
 
-== Intro
+## Intro
 
 Pyterato es un sencillo script que comprueba errores comunes en textos
 literarios en Españól.
 
-== Instalación
+## Instalación
 
 Tienes que instalar OpenOffice o LibreOffice (realmente sólo lo he probado con 
 LibreOffice). También requiere el paquete script-provider-python.
@@ -16,7 +16,7 @@ En Ubuntu eso se haría de la siguiente forma:
 sudo apt install libreoffice libreoffice-script-provider-python uno-libs3 python3-uno python3
 ```
 
-== Uso
+## Uso
 
 - Abre LibreOffice con el siguiente comando:
 
