@@ -131,7 +131,7 @@ class ContainedFind:
         self.idx = idx
 
     def __str__(self):
-        return 'Repetición de palabra contenida "%s" %d palabaras atrás: %s' %\
+        return 'Repetición de palabra contenida "%s" %d palabras atrás: %s' %\
                 (self.word, self.idx, self.oldword)
 
 def check_contained(word, words):
