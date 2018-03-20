@@ -3,7 +3,7 @@
 ## Intro
 
 Pyterato es un sencillo script que comprueba errores comunes en textos
-literarios en Españól.
+literarios en Español.
 
 ## Instalación
 
