@@ -46,8 +46,6 @@ USUALLY_MISUSED_SAYWORDS = {
         "conminó", "conminé", "exhortó", "exhorté", "aludió", "aludí",
 }
 
-LATEST_WORDS = []
-
 def initialize():
     localContext = uno.getComponentContext()
     resolver = localContext.ServiceManager.createInstanceWithContext(
