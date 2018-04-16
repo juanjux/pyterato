@@ -17,6 +17,12 @@ sudo apt install libreoffice libreoffice-script-provider-python uno-libs3 python
 pip3 install unotools
 ```
 
+Una vez hecho eso, ya puedes instalar pyterato usando pip:
+
+```
+pip3 install pyterato
+```
+
 ## Uso
 
 - Abre LibreOffice con el siguiente comando:
