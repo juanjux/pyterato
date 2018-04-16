@@ -19,9 +19,11 @@ from unotools.component.writer import Writer
 # - Print page number of the findings
 # - Check contained: normalize accents
 # - Check: misused/abused expressions ("perlaban la frente", "sacudir la cabeza").
-# - Check: commonly misused and abused verbs (detect verb roots) (espetar, mascullar,
-#          perlar, empalidecer).
 # - Check: intransitive verbs used as transitive (tamborilear).
+
+# XXX Base find class, just get the message
+# XXX factorize or get out the common words check
+# XXX system to enable or disable checks individually
 
 COMMON_WORDS = {
         "el", "él", "lo", "la", "le", "los", "las", "que", "qué", "cual", "cuál",
@@ -35,6 +37,18 @@ COMMON_WORDS = {
         "dijo", "dije", "preguntó", "pregunté", # checked by saywords_checker
 }
 
+# First element is the root and others are non verbal words (thus allowed)
+# FIXME: check the sufix for verbal conjugations
+USUALLY_MISUSED_VERB_ROOTS = [
+        ("espet", "espeto", "espetos"),
+        ("mascull",),
+        ("perl", "perla", "perlas"),
+        ("empalid",),
+        ("tinti",),
+        ("manten", "mantenido", "mantenida", "mantenidos", "mantenidas"),
+        ("mantuv",),
+]
+
 USUALLY_PEDANTIC_SAYWORDS = {
         "rebuznó", "rugió", "rugí", "bramó", "bramé", "declaró", "declaré",
         "inquirió", "inquirí", "sostuvo", "sostuve", "refirió", "referí",
@@ -45,6 +59,7 @@ USUALLY_MISUSED_SAYWORDS = {
         "comentó", "comenté", "interrogó", "interrogué", "amenazó", "amenacé",
         "conminó", "conminé", "exhortó", "exhorté", "aludió", "aludí",
 }
+
 
 def initialize():
     localContext = uno.getComponentContext()
@@ -78,6 +93,7 @@ class WordIterator:
             raise StopIteration
         return word, page
 
+
 class MenteFind:
     def __init__(self, word, oldword, idx):
         self.word = word
@@ -100,6 +116,7 @@ def check_mente(word, words):
     return findings
 check_mente.oldwords = 100
 
+
 class RepetitionFind:
     def __init__(self, word, idx):
         self.word = word
@@ -108,6 +125,7 @@ class RepetitionFind:
     def __str__(self):
         return 'Repetición de palabra "%s" %d palabras atrás' %\
                 (self.word, self.idx)
+
 
 def check_repetition(word, words):
     # FIXME: search for approximate words or words containing this too
@@ -133,6 +151,7 @@ class ContainedFind:
     def __str__(self):
         return 'Repetición de palabra contenida "%s" %d palabras atrás: %s' %\
                 (self.word, self.idx, self.oldword)
+
 
 def check_contained(word, words):
     if word in COMMON_WORDS:
@@ -165,6 +184,8 @@ class MisusedSayFind:
     def __str__(self):
         return 'Verbo generalmente mal usado en diálogos: %s' % self.word
 
+# FIXME: check for a "-" or the equivalent long version to check that we're
+# probably in a dialog.
 def check_saywords(word):
     findings = []
 
@@ -179,6 +200,31 @@ def check_saywords(word):
         # print('Verbo generalmente mal utilizado en diálogos: ', word)
 
     return findings
+
+
+class MisusedVerbFind:
+    def __init__(self, word):
+        self.word = word
+
+    def __str__(self):
+        return 'Verbo generalmente mal usado: %s' % self.word
+
+
+def check_verbs(word):
+    if word in COMMON_WORDS:
+        return []
+
+    for misused in USUALLY_MISUSED_VERB_ROOTS:
+        root = misused[0]
+        if word.startswith(root):
+            for allowed in misused[1:]:
+                if word == allowed:
+                    return []
+            else:
+                return [MisusedVerbFind(word)]
+
+    return []
+
 
 def print_results(findings):
     for page in findings:
@@ -211,6 +257,7 @@ def main():
         tmpfindings.append(check_repetition(word, words.prev_words))
         tmpfindings.append(check_contained(word, words.prev_words))
         tmpfindings.append(check_saywords(word))
+        tmpfindings.append(check_verbs(word))
 
         for f in tmpfindings:
             if len(f):

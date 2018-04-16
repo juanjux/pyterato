@@ -14,6 +14,7 @@ En Ubuntu eso se haría de la siguiente forma:
 
 ```bash
 sudo apt install libreoffice libreoffice-script-provider-python uno-libs3 python3-uno python3
+pip3 install unotools
 ```
 
 ## Uso
