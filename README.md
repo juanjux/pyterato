@@ -1,4 +1,4 @@
-(Spanish language, since this script is intended for writers in it).
+(Spanish language, since this script is intended for writers, tldr; this is an OpenOffice linter for Spanish literary language).
 
 ## Intro
 
