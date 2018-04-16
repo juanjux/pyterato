@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import abc
 from pprint import pprint
 from time import sleep
 from collections import OrderedDict
@@ -20,9 +21,8 @@ from unotools.component.writer import Writer
 # - Check contained: normalize accents
 # - Check: misused/abused expressions ("perlaban la frente", "sacudir la cabeza").
 # - Check: intransitive verbs used as transitive (tamborilear).
+# - Profile and optimize.
 
-# XXX Base find class, just get the message
-# XXX factorize or get out the common words check
 # XXX system to enable or disable checks individually
 
 COMMON_WORDS = {
@@ -30,11 +30,18 @@ COMMON_WORDS = {
         "cuales", "como", "cómo", "este", "éste", "esta", "ésta", "ese", "esa", "eso",
         "esos", "aquel", "aquello", "aquella", "y", "o", "ha", "han", "con", "sin",
         "desde", "ya", "aquellos", "aquellas", "se", "de", "un", "uno", "unos", "una",
-        "unas", "con", "ante", "ya", "para", "sin", "mas", "más", "es", "era", "eran",
+        "unas", "con", "ante", "ya", "para", "sin", "mas", "más",
         "serían", "sería", "en", "por", "mi", "mis", "si", "sí", "no", "hasta", "su",
         "mi", "sus", "tus", "sobre", "del", "a", "e", "pero", "había", "habías", "habían",
         "habría", "habrías",  "habrían", "ser", "al", "sido", "haya", "otra", "me", "te",
-        "dijo", "dije", "preguntó", "pregunté", # checked by saywords_checker
+        "dijo", "dije", "preguntó", "pregunté",
+
+        # verbo ser is never considered repetitive except for some uncommon/longer conjugations
+        "sea", "sean", "soy", "eres", "es", "somos", "sois", "son", "era", "eras",
+        "érais", "eran", "seré", "serás", "será", "seréis", "serán", "sido",
+        "sería", "serías", "seríamos", "seríais", "serían", "fui", "fuiste", "fue",
+        "fuimos", "fueron", "sé", "sed", "sean", "fuera",
+        "fueras", "fuera", "fuese", "fueses", "fuesen", "siendo",
 }
 
 # First element is the root and others are non verbal words (thus allowed)
@@ -47,6 +54,7 @@ USUALLY_MISUSED_VERB_ROOTS = [
         ("tinti",),
         ("manten", "mantenido", "mantenida", "mantenidos", "mantenidas"),
         ("mantuv",),
+        ("tamboril", "tamborilero", "tamborilera", "tamborileros", "tamborileras"),
 ]
 
 USUALLY_PEDANTIC_SAYWORDS = {
@@ -93,14 +101,25 @@ class WordIterator:
             raise StopIteration
         return word, page
 
-
-class MenteFind:
-    def __init__(self, word, oldword, idx):
+class BaseFind(abc.ABC):
+    def __init__(self, word):
         self.word = word
+
+    @abc.abstractmethod
+    def get_message(self):
+        pass
+
+    def __str__(self):
+        return self.get_message()
+
+
+class MenteFind(BaseFind):
+    def __init__(self, word, oldword, idx):
+        super().__init__(word)
         self.oldword = oldword
         self.idx = idx
 
-    def __str__(self):
+    def get_message(self):
         return 'Repetición de palabra con sufijo mente ("%s") %d palabras atrás: %s' %\
                 (self.word, self.idx, self.oldword)
 
@@ -117,21 +136,18 @@ def check_mente(word, words):
 check_mente.oldwords = 100
 
 
-class RepetitionFind:
+class RepetitionFind(BaseFind):
     def __init__(self, word, idx):
-        self.word = word
+        super().__init__(word)
         self.idx = idx
 
-    def __str__(self):
+    def get_message(self):
         return 'Repetición de palabra "%s" %d palabras atrás' %\
                 (self.word, self.idx)
 
 
 def check_repetition(word, words):
     # FIXME: search for approximate words or words containing this too
-    if word in COMMON_WORDS:
-        return []
-
     findings = []
     for idx, oldword in enumerate(reversed(words[-check_repetition.oldwords:-1])):
         if oldword == word:
@@ -142,21 +158,18 @@ def check_repetition(word, words):
 check_repetition.oldwords = 50
 
 
-class ContainedFind:
+class ContainedFind(BaseFind):
     def __init__(self, word, oldword, idx):
-        self.word = word
+        super().__init__(word)
         self.oldword = oldword
         self.idx = idx
 
-    def __str__(self):
+    def get_message(self):
         return 'Repetición de palabra contenida "%s" %d palabras atrás: %s' %\
                 (self.word, self.idx, self.oldword)
 
 
 def check_contained(word, words):
-    if word in COMMON_WORDS:
-        return []
-
     findings = []
     for idx, oldword in enumerate(reversed(words[-check_contained.oldwords:-1])):
         if oldword in COMMON_WORDS:
@@ -170,18 +183,18 @@ def check_contained(word, words):
 check_contained.oldwords = 15
 
 
-class PedanticSayFind:
+class PedanticSayFind(BaseFind):
     def __init__(self, word):
-        self.word = word
+        super().__init__(word)
 
-    def __str__(self):
+    def get_message(self):
         return 'Verbo generalmente pedante en diálogos: %s' % self.word
 
-class MisusedSayFind:
+class MisusedSayFind(BaseFind):
     def __init__(self, word):
-        self.word = word
+        super().__init__(word)
 
-    def __str__(self):
+    def get_message(self):
         return 'Verbo generalmente mal usado en diálogos: %s' % self.word
 
 # FIXME: check for a "-" or the equivalent long version to check that we're
@@ -202,18 +215,15 @@ def check_saywords(word):
     return findings
 
 
-class MisusedVerbFind:
+class MisusedVerbFind(BaseFind):
     def __init__(self, word):
-        self.word = word
+        super().__init__(word)
 
-    def __str__(self):
+    def get_message(self):
         return 'Verbo generalmente mal usado: %s' % self.word
 
 
 def check_verbs(word):
-    if word in COMMON_WORDS:
-        return []
-
     for misused in USUALLY_MISUSED_VERB_ROOTS:
         root = misused[0]
         if word.startswith(root):
@@ -242,13 +252,15 @@ def main():
     model = desktop.getCurrentComponent()
     text = model.Text
     controller = model.getCurrentController()
+
     words = WordIterator(text, controller)
     findings = OrderedDict()
 
     for word, page in words:
-        tmpfindings = []
-        if not word:
+        if not word or word in COMMON_WORDS:
             continue
+
+        tmpfindings = []
 
         if page not in findings:
             findings[page] = []
