@@ -6,7 +6,7 @@ from os import path
 
 here = path.abspath(path.dirname(__file__))
 
-description = long_descr = "Python application to lint Spanish literary language from LibrOffice"
+description = long_descr = "Python application to lint Spanish literary language from LibreOffice"
 
 main_ns = {}
 with open("pyterato/version.py") as ver_file:
