@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import abc
+from fnmatch import fnmatch
 from pprint import pprint
 from time import sleep
 from collections import OrderedDict
@@ -22,8 +23,7 @@ from unotools.component.writer import Writer
 # - Check: misused/abused expressions ("perlaban la frente", "sacudir la cabeza").
 # - Check: intransitive verbs used as transitive (tamborilear).
 # - Profile and optimize.
-
-# XXX system to enable or disable checks individually
+# - Way to disable or enable checks individually
 
 COMMON_WORDS = {
         "el", "él", "lo", "la", "le", "los", "las", "que", "qué", "cual", "cuál",
@@ -68,6 +68,12 @@ USUALLY_MISUSED_SAYWORDS = {
         "conminó", "conminé", "exhortó", "exhorté", "aludió", "aludí",
 }
 
+# These are in reverse or
+USUALLY_MISUSED_EXPRESSIONS = [
+        ["sacud*", "la", "cabeza"],
+]
+for i in USUALLY_MISUSED_EXPRESSIONS:
+    i.reverse()
 
 def initialize():
     localContext = uno.getComponentContext()
@@ -77,7 +83,7 @@ def initialize():
     smgr = ctx.ServiceManager
     return smgr.createInstanceWithContext( "com.sun.star.frame.Desktop",ctx)
 
-
+# XXX store prev_words as a stack so checkers doesnt have to reverse it
 class WordIterator:
     def __init__(self, text, controller):
         self.text = text
@@ -235,6 +241,37 @@ def check_verbs(word):
 
     return []
 
+class MisusedExpression(BaseFind):
+    def __init__(self, word, expression):
+        super().__init__(word)
+        self.expression = expression
+
+    def get_message(self):
+        return 'Expression generalmente mal usada: %s' % ' '.join(reversed(self.expression))
+
+# FIXME: set with the first words of each expressions to optimize checks
+def check_expressions(word, words):
+    rev_words = list(reversed(words))
+
+    for exp in USUALLY_MISUSED_EXPRESSIONS:
+        if len(exp) > (len(rev_words) + 1):
+            continue
+
+        if not fnmatch(word, exp[0]):
+            continue
+
+        # match, check the previous words in the expression
+        prevcount = 1
+        for exp_word in exp[1:]:
+            if not fnmatch(rev_words[prevcount], exp_word):
+                break
+            prevcount += 1
+        else:
+            # matched
+            return [MisusedExpression(word, exp)]
+
+    return []
+
 
 def print_results(findings):
     for page in findings:
@@ -270,6 +307,7 @@ def main():
         tmpfindings.append(check_contained(word, words.prev_words))
         tmpfindings.append(check_saywords(word))
         tmpfindings.append(check_verbs(word))
+        tmpfindings.append(check_expressions(word, words.prev_words))
 
         for f in tmpfindings:
             if len(f):
