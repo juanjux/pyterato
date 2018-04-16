@@ -16,13 +16,13 @@ from unotools.component.writer import Writer
 # - Factorize the looping over old words so it's only done once for every new word
 #   (checking if the index applies for every check).
 # - Add explanation and examples of bad/good usage for usually missused saywords.
-# - Detect dialogs, check saywords online in them.
+# - Detect dialogs for the saywords checker.
 # - Detect saywords conjugations.
 # - Run the checks from a list.
 # - Check contained: normalize accents
-# - Check: misused/abused expressions ("perlaban la frente", "sacudir la cabeza").
 # - Check: intransitive verbs used as transitive (tamborilear).
-# - Profile and optimize.
+# - See if there is any way to optimize the word by word iteration while keeping the
+#   page number (the current method it's pretty slow on the LibreOffice side).
 # - Way to disable or enable checks individually
 
 COMMON_WORDS = {
@@ -104,6 +104,7 @@ class WordIterator:
 
     def __next__(self):
         self.cursor.gotoEndOfWord(True)
+        # FIXME: this line takes most of the time!
         self.view_cursor.gotoRange(self.cursor, False)
         page = self.view_cursor.getPage()
         word = ''.join(e for e in self.cursor.String.lower() if e.isalnum())
@@ -256,10 +257,7 @@ def check_expressions(word, words):
         return []
 
     for exp in USUALLY_MISUSED_EXPRESSIONS:
-        if len(exp) > len(words) + 1:
-            continue
-
-        if not fnmatch(word, exp[0]):
+        if len(exp) > len(words) + 1 or not fnmatch(word, exp[0]):
             continue
 
         # match, check the previous words in the expression

@@ -40,3 +40,31 @@ está en un estado muy inicial y simplemente comprueba usos de palabras (no tien
 aún procesado de lenguaje natural) por lo que en muchas ocasiones producirá falsos
 positivos. Usa tu sentido común para determinar si las correcciones indicadas se
 aplican al texto.
+
+## Problemas
+
+Si al ejecutarlo te da un error similar a éste:
+
+```
+Traceback (most recent call last):
+  File "cli.py", line 9, in <module>
+    import uno
+  File "/usr/local/lib/python3.6/dist-packages/uno/__init__.py", line 4, in <module>
+    from base import Element, Css, Payload, UnoBaseFeature, UnoBaseField
+ModuleNotFoundError: No module named 'base'
+```
+
+Sigue estos pasos:
+
+1. Desistala los módulos `uno` y `unotools` de pip:
+
+```pip3 uninstall uno unotools```
+
+2. Instala o reinstala los paquetes de tu distribución (ver más arriba para Ubuntu). 
+Si usas `apt`, añade el parámetro `--reinstall`.
+
+3. Reinstala el paquete:
+
+```
+pip3 install pyterato
+```
