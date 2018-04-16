@@ -11,6 +11,7 @@ from unotools import Socket, connect
 from unotools.component.writer import Writer
 
 # TODO:
+# - Unittests!!!
 # - Show the results in LibreOffice
 # - Factorize the looping over old words so it's only done once for every new word
 #   (checking if the index applies for every check).
@@ -18,7 +19,6 @@ from unotools.component.writer import Writer
 # - Detect dialogs, check saywords online in them.
 # - Detect saywords conjugations.
 # - Run the checks from a list.
-# - Print page number of the findings
 # - Check contained: normalize accents
 # - Check: misused/abused expressions ("perlaban la frente", "sacudir la cabeza").
 # - Check: intransitive verbs used as transitive (tamborilear).
@@ -71,9 +71,16 @@ USUALLY_MISUSED_SAYWORDS = {
 # These are in reverse or
 USUALLY_MISUSED_EXPRESSIONS = [
         ["sacud*", "la", "cabeza"],
+        ["perlab*", "*", "frente"],
 ]
 for i in USUALLY_MISUSED_EXPRESSIONS:
     i.reverse()
+
+# To optimize lookups of new potential expressions:
+USUALLY_MISUSED_EXPRESSIONS_LAST_WORDS = set()
+for exp in USUALLY_MISUSED_EXPRESSIONS:
+    USUALLY_MISUSED_EXPRESSIONS_LAST_WORDS.add(exp[0])
+
 
 def initialize():
     localContext = uno.getComponentContext()
@@ -83,7 +90,6 @@ def initialize():
     smgr = ctx.ServiceManager
     return smgr.createInstanceWithContext( "com.sun.star.frame.Desktop",ctx)
 
-# XXX store prev_words as a stack so checkers doesnt have to reverse it
 class WordIterator:
     def __init__(self, text, controller):
         self.text = text
@@ -133,7 +139,7 @@ class MenteFind(BaseFind):
 def check_mente(word, words):
     findings = []
     if word != 'mente' and word.endswith('mente'):
-        for idx, oldword in enumerate(reversed(words[-check_mente.oldwords:-1])):
+        for idx, oldword in enumerate(words[-check_mente.oldwords:-1]):
             if oldword != 'mente' and oldword.endswith('mente'):
                 # findings.append((oldword, idx))
                 findings.append(MenteFind(word, oldword, idx))
@@ -155,7 +161,7 @@ class RepetitionFind(BaseFind):
 def check_repetition(word, words):
     # FIXME: search for approximate words or words containing this too
     findings = []
-    for idx, oldword in enumerate(reversed(words[-check_repetition.oldwords:-1])):
+    for idx, oldword in enumerate(words[-check_repetition.oldwords:-1]):
         if oldword == word:
             # findings.append(idx)
             findings.append(RepetitionFind(word, idx))
@@ -177,7 +183,7 @@ class ContainedFind(BaseFind):
 
 def check_contained(word, words):
     findings = []
-    for idx, oldword in enumerate(reversed(words[-check_contained.oldwords:-1])):
+    for idx, oldword in enumerate(words[-check_contained.oldwords:-1]):
         if oldword in COMMON_WORDS:
             continue
 
@@ -209,14 +215,10 @@ def check_saywords(word):
     findings = []
 
     if word in USUALLY_PEDANTIC_SAYWORDS:
-        # findings.append(word)
         findings.append(PedanticSayFind(word))
-        # print('Verbo generalmente pedante si se usa en diálogos: ', word)
 
     if word in USUALLY_MISUSED_SAYWORDS:
         findings.append(MisusedSayFind(word))
-        # findings.append(word)
-        # print('Verbo generalmente mal utilizado en diálogos: ', word)
 
     return findings
 
@@ -249,21 +251,21 @@ class MisusedExpression(BaseFind):
     def get_message(self):
         return 'Expression generalmente mal usada: %s' % ' '.join(reversed(self.expression))
 
-# FIXME: set with the first words of each expressions to optimize checks
 def check_expressions(word, words):
-    rev_words = list(reversed(words))
+    if word not in USUALLY_MISUSED_EXPRESSIONS_LAST_WORDS:
+        return []
 
     for exp in USUALLY_MISUSED_EXPRESSIONS:
-        if len(exp) > (len(rev_words) + 1):
+        if len(exp) > len(words) + 1:
             continue
 
         if not fnmatch(word, exp[0]):
             continue
 
         # match, check the previous words in the expression
-        prevcount = 1
+        prevcount = 2
         for exp_word in exp[1:]:
-            if not fnmatch(rev_words[prevcount], exp_word):
+            if not fnmatch(words[-prevcount], exp_word):
                 break
             prevcount += 1
         else:
