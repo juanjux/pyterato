@@ -15,7 +15,7 @@ COMMON_WORDS = {
         "serían", "sería", "en", "por", "mi", "mis", "si", "sí", "no", "hasta", "su",
         "mi", "sus", "tus", "sobre", "del", "a", "e", "pero", "había", "habías", "habían",
         "habría", "habrías",  "habrían", "ser", "al", "sido", "haya", "otra", "me", "te",
-        "dijo", "dije", "preguntó", "pregunté",
+        "dijo", "dije", "preguntó", "pregunté", "ni", "les", "hecho",
 
         # verbo ser is never considered repetitive except for some uncommon/longer conjugations
         "sea", "sean", "soy", "eres", "es", "somos", "sois", "son", "era", "eras",
@@ -92,7 +92,7 @@ def check_mente(word, words):
         for idx, oldword in enumerate(words[-check_mente.oldwords:-1]):
             if oldword != 'mente' and oldword.endswith('mente'):
                 # findings.append((oldword, idx))
-                findings.append(MenteFind(word, oldword, idx))
+                findings.append(MenteFind(word, oldword, check_mente.oldwords - idx))
 
     return findings
 check_mente.oldwords = 100
@@ -111,10 +111,12 @@ class RepetitionFind(BaseFind):
 def check_repetition(word, words):
     # FIXME: search for approximate words or words containing this too
     findings = []
+    if word == 'naves':
+        print(words[-check_mente.oldwords:-1])
     for idx, oldword in enumerate(words[-check_repetition.oldwords:-1]):
         if oldword == word:
             # findings.append(idx)
-            findings.append(RepetitionFind(word, idx))
+            findings.append(RepetitionFind(word, check_repetition.oldwords - idx))
 
     return findings
 check_repetition.oldwords = 50
