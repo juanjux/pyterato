@@ -11,19 +11,22 @@ from unotools.component.writer import Writer
 import pyterato.checks as checks
 
 # TODO:
-# - Unittests!!!
 # - Show the results in LibreOffice
 # - Factorize the looping over old words so it's only done once for every new word
 #   (checking if the index applies for every check).
 # - Add explanation and examples of bad/good usage for usually missused saywords.
 # - Detect dialogs for the saywords checker.
 # - Detect saywords conjugations.
+# - Once I've enough tests, normalize the check function parameters and turn them
+#   into a static method of the *Find classes.
 # - Run the checks from a list.
 # - Check contained: normalize accents
 # - Check: intransitive verbs used as transitive (tamborilear).
 # - See if there is any way to optimize the word by word iteration while keeping the
 #   page number (the current method it's pretty slow on the LibreOffice side).
-# - Way to disable or enable checks individually
+# - Way to disable or enable checks individually using command line parameters or a
+#   config file.
+# - MyPy typing.
 
 def initialize():
     localContext = uno.getComponentContext()
