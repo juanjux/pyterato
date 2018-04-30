@@ -85,6 +85,7 @@ def main():
         if page not in findings:
             findings[page] = []
 
+        tmpfindings.append(checks.check_overused(word))
         tmpfindings.append(checks.check_mente(word, words.prev_words))
         tmpfindings.append(checks.check_repetition(word, words.prev_words))
         tmpfindings.append(checks.check_contained(word, words.prev_words))
@@ -92,6 +93,7 @@ def main():
         tmpfindings.append(checks.check_verbs(word))
         tmpfindings.append(checks.check_expressions(word, words.prev_words))
 
+        # print(tmpfindings)
         for f in tmpfindings:
             if len(f):
                 findings[page].append(f)

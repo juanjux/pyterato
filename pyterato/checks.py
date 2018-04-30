@@ -38,6 +38,11 @@ USUALLY_MISUSED_VERB_ROOTS = [
         ("tamboril", "tamborilero", "tamborilera", "tamborileros", "tamborileras"),
 ]
 
+# Words too frecuently used that usually have lots of more proper synonymous
+OVERUSED_WORDS = {
+        "sonido*", "ruido*", "cosa*",
+}
+
 USUALLY_PEDANTIC_SAYWORDS = {
         "rebuznó", "rugió", "rugí", "bramó", "bramé", "declaró", "declaré",
         "inquirió", "inquirí", "sostuvo", "sostuve", "refirió", "referí",
@@ -49,7 +54,7 @@ USUALLY_MISUSED_SAYWORDS = {
         "conminó", "conminé", "exhortó", "exhorté", "aludió", "aludí",
 }
 
-# These are in reverse or
+# These are in reverse order. Last word can't use a pattern.
 USUALLY_MISUSED_EXPRESSIONS = [
         ["sacud*", "la", "cabeza"],
         ["perlab*", "*", "frente"],
@@ -73,6 +78,16 @@ class BaseFind(abc.ABC):
 
     def __str__(self):
         return self.get_message()
+
+class OverUsedFind(BaseFind):
+    def get_message(self):
+        return 'Palabras genéricas demasiado usadas (buscar sinónimo más adecuado): %s' % self.word
+
+def check_overused(word):
+    for overused in OVERUSED_WORDS:
+        if fnmatch(word, overused):
+            return [OverUsedFind(word)]
+    return []
 
 
 class MenteFind(BaseFind):
@@ -111,8 +126,6 @@ class RepetitionFind(BaseFind):
 def check_repetition(word, words):
     # FIXME: search for approximate words or words containing this too
     findings = []
-    if word == 'naves':
-        print(words[-check_mente.oldwords:-1])
     for idx, oldword in enumerate(words[-check_repetition.oldwords:-1]):
         if oldword == word:
             # findings.append(idx)
