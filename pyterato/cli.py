@@ -8,6 +8,7 @@ from collections import OrderedDict
 
 # XXX move to where needed
 from pyterato.worditerator_lo import LibreOfficeWordIterator
+from pyterato.worditerator_txtfile import TxtFileWordIterator
 import pyterato.checks as checks
 
 # TODO:
@@ -43,7 +44,8 @@ def print_results(findings):
 
 
 def main():
-    words = LibreOfficeWordIterator(paging=False)
+    # words = LibreOfficeWordIterator(paging=False)
+    words = TxtFileWordIterator('/home/juanjux/cap1.txt')
     findings = OrderedDict()
 
     for word, page in words:

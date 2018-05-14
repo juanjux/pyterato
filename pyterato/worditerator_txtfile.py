@@ -1,0 +1,21 @@
+from pyterato.worditerator_base import BaseWordIterator
+
+class TxtFileWordIterator(BaseWordIterator):
+
+    # FIXME: read by line, maybe using the file own (line) iterator
+    def __init__(self, fname: str) -> None:
+        super().__init__()
+        self.fname = fname
+        # XXX membership needed?
+        with open(fname, 'r') as f:
+            self.text = f.read()
+            self.words = self.text.split()
+
+    def __next__(self):
+        if not self.words:
+            raise StopIteration
+
+        ret = ''.join(list(filter(lambda x: x.isalnum(), self.words[0])))
+        self._prev_words.append(ret)
+        del self.words[0]
+        return ret, None

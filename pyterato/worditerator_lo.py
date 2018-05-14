@@ -1,15 +1,16 @@
 from pyterato.worditerator_base import BaseWordIterator
 
-class LibreOfficeWordIterator (BaseWordIterator):
+class LibreOfficeWordIterator(BaseWordIterator):
 
     def __init__(self, paging=True):
+        super().__init__()
+
         model, controller = self._initialize_OO()
         self.cursor = model.Text.createTextCursor()
         self.cursor.gotoStart(False)
         self.paging = paging
         if paging:
             self.view_cursor = controller.getViewCursor()
-        self.prev_words = []
 
 
     def _initialize_OO(self):
@@ -39,7 +40,11 @@ class LibreOfficeWordIterator (BaseWordIterator):
 
         word = ''.join(e for e in self.cursor.String.lower() if e.isalnum())
 
-        self.prev_words.append(word)
+        self._prev_words.append(word)
         if not self.cursor.gotoNextWord(False):
             raise StopIteration
         return word, page
+
+    @property
+    def prev_words(self):
+        return self._prev_words
