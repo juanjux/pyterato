@@ -1,3 +1,5 @@
+import sys
+
 from pyterato.worditerator_base import BaseWordIterator
 
 class TxtFileWordIterator(BaseWordIterator):
@@ -5,11 +7,15 @@ class TxtFileWordIterator(BaseWordIterator):
     # FIXME: read by line, maybe using the file own (line) iterator
     def __init__(self, fname: str) -> None:
         super().__init__()
-        self.fname = fname
-        # XXX membership needed?
-        with open(fname, 'r') as f:
-            self.text = f.read()
-            self.words = self.text.split()
+
+        if not fname:
+            print('Leyendo de entrada estándar...')
+            self.text = sys.stdin.read()
+        else:
+            with open(fname, 'r') as f:
+                self.text = f.read()
+
+        self.words = self.text.split()
 
     def __next__(self):
         if not self.words:

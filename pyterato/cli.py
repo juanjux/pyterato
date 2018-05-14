@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 
 import abc
+import argparse
 import os
+import sys
 from fnmatch import fnmatch
 from pprint import pprint
 from collections import OrderedDict
 
-# XXX move to where needed
-from pyterato.worditerator_lo import LibreOfficeWordIterator
-from pyterato.worditerator_txtfile import TxtFileWordIterator
 import pyterato.checks as checks
 
 # TODO:
@@ -31,7 +30,7 @@ def print_results(findings):
     total = 0
     for page in findings:
         if page is not None:
-            print('Página %d: ' % page)
+            print(os.linesep + '===> Página %d: ' % page + os.linesep)
 
         flist = findings[page]
         for typefindings in flist:
@@ -39,13 +38,64 @@ def print_results(findings):
                 total += 1
                 print(f)
 
-        print(checks.SEPARATOR + os.linesep)
-        print('Total: %d avisos emitidos' % total)
+    print(checks.SEPARATOR + os.linesep)
+    print('Total: %d avisos emitidos' % total)
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+            '-t', '--txt',
+            action="store_true",
+            help='Usar fichero en texto plano y UTF8 como fuente de entrada (por defecto).'
+    )
+    group.add_argument(
+            '-l', '--libreoffice',
+            action='store_true',
+            help='Usar Libre/Open Office como fuente de entrada.'
+    )
+    parser.add_argument(
+            '-H', '--lo_host',
+            type=str,
+            default='localhost',
+            help='Hostname a usar para la conexión a Libre/Open Office.'
+    )
+    parser.add_argument(
+            '-p', '--lo_port',
+            type=str,
+            default='8100',
+            help='Puerto a usar para la conexión a Libre/Open Office.'
+    )
+    parser.add_argument(
+            '-P', '--lo_paging',
+            action='store_true',
+            help='Con --libreoffice, indicar las páginas de los errores con (lento).'
+    )
+    parser.add_argument(
+            'file',
+            nargs='?',
+            type=str,
+            help='Fichero fuente de entrada (no se necesita con --libreoffice). ' +
+                 'Si no se indica se usará stdin.'
+    )
+
+    args = parser.parse_args()
+    if not args.txt and not args.libreoffice:
+        args.txt = True
+
+    return parser.parse_args()
 
 
 def main():
-    # words = LibreOfficeWordIterator(paging=False)
-    words = TxtFileWordIterator('/home/juanjux/cap1.txt')
+    options = parse_arguments()
+    if options.libreoffice:
+        from pyterato.worditerator_lo import LibreOfficeWordIterator
+        words = LibreOfficeWordIterator(paging=options.lo_paging)
+    else:
+        from pyterato.worditerator_txtfile import TxtFileWordIterator
+        words = TxtFileWordIterator(options.file)
+
     findings = OrderedDict()
 
     for word, page in words:

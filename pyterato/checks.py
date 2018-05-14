@@ -150,6 +150,7 @@ class RepetitionFind(BaseFind):
         for idx, oldword in enumerate(words[-oldwords:-1]):  # type: ignore
             if oldword == word:
                 # findings.append(idx)
+                print('XXX idx: ', idx)
                 findings.append(RepetitionFind(word, words, oldwords - idx))  # type: ignore
 
         return findings  # type: ignore
