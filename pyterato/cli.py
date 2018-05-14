@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 from fnmatch import fnmatch
 from pprint import pprint
 from collections import OrderedDict
@@ -71,6 +72,7 @@ class LibreOfficeWordIterator:
 
 
 def print_results(findings):
+    total = 0
     for page in findings:
         if page is not None:
             print('Página %d: ' % page)
@@ -78,9 +80,11 @@ def print_results(findings):
         flist = findings[page]
         for typefindings in flist:
             for f in typefindings:
+                total += 1
                 print(f)
 
-        print()
+        print(checks.SEPARATOR + os.linesep)
+        print('Total: %d avisos emitidos' % total)
 
 
 def main():

@@ -1,24 +1,28 @@
 import abc
+import os
 from fnmatch import fnmatch
 from typing import List, Set, Tuple, Union, TypeVar, Generic, Any
 
 
 COMMON_WORDS: Set[str] = {
         "el", "él", "lo", "la", "le", "los", "las", "que", "qué", "cual", "cuál",
-        "cuales", "como", "cómo", "este", "éste", "esta", "ésta", "ese", "esa", "eso",
+        "cuales", "como", "cómo", "este", "éste", "esta", "esto", "ésta", "ese", "esa", "eso",
         "esos", "aquel", "aquello", "aquella", "y", "o", "ha", "han", "con", "sin",
         "desde", "ya", "aquellos", "aquellas", "se", "de", "un", "uno", "unos", "una",
-        "unas", "con", "ante", "ya", "para", "sin", "mas", "más",
+        "unas", "con", "ante", "ya", "para", "sin", "mas", "más", "habeis",
         "serían", "sería", "en", "por", "mi", "mis", "si", "sí", "no", "hasta", "su",
         "mi", "sus", "tus", "sobre", "del", "a", "e", "pero", "había", "habías", "habían",
         "habría", "habrías",  "habrían", "ser", "al", "sido", "haya", "otra", "me", "te",
         "dijo", "dije", "preguntó", "pregunté", "ni", "les", "hecho",
+        "donde", "da", "dan", "das", "cuando", "donde", "os", "vuestros", "vuestras",
+        "vosotros", "vosotras", "algo", "muy", "mas", "menos", "entre", "tras", "aún",
+        "hacia",
 
         # verbo ser is never considered repetitive except for some uncommon/longer conjugations
         "sea", "sean", "soy", "eres", "es", "somos", "sois", "son", "era", "eras",
         "érais", "eran", "seré", "serás", "será", "seréis", "serán", "sido",
         "sería", "serías", "seríamos", "seríais", "serían", "fui", "fuiste", "fue",
-        "fuimos", "fueron", "sé", "sed", "sean", "fuera",
+        "fuimos", "fueron", "sé", "sed", "sean", "fuera", "estaba", "estaban",
         "fueras", "fuera", "fuese", "fueses", "fuesen", "siendo",
 }
 
@@ -77,19 +81,28 @@ _USUALLY_MISUSED_EXPRESSIONS_LAST_WORDS = set()
 for exp in USUALLY_MISUSED_EXPRESSIONS:
     _USUALLY_MISUSED_EXPRESSIONS_LAST_WORDS.add(exp[0])
 
+SEPARATOR = '=' * 20
 
 class BaseFind(abc.ABC):
+    context_size = 6
+
     @staticmethod
     @abc.abstractmethod
     def check(word: str, words: List[str]) -> List[Any]:
         pass
 
-    def __init__(self, word: str) -> None:
+    def __init__(self, word: str, words: List[str]) -> None:
         self.word = word
+        self.context = ' '.join(words[-self.context_size:])
 
     @abc.abstractmethod
-    def get_message(self) -> str:
+    def custom_message(self) -> str:
         pass
+
+    def get_message(self) -> str:
+        return (SEPARATOR + os.linesep +
+                self.custom_message() + os.linesep +
+                'Contexto: ...' + self.context + '...')
 
     def __str__(self) -> str:
         return self.get_message()
@@ -100,10 +113,10 @@ class OverUsedFind(BaseFind):
     def check(word: str, words: List[str]) -> List[BaseFind]:
         for overused in _OVERUSED_ALL:
             if fnmatch(word, overused):
-                return [OverUsedFind(word)]
+                return [OverUsedFind(word, words)]
         return []
 
-    def get_message(self) -> str:
+    def custom_message(self) -> str:
         return 'Palabras/verbos comodín: %s' % self.word
 
 
@@ -115,16 +128,16 @@ class MenteFind(BaseFind):
             for idx, oldword in enumerate(words[-oldwords:-1]):  # type: ignore
                 if oldword != 'mente' and oldword.endswith('mente'):
                     # findings.append((oldword, idx))
-                    findings.append(MenteFind(word, oldword, oldwords - idx))  # type: ignore
+                    findings.append(MenteFind(word, words, oldword, oldwords - idx))  # type: ignore
 
         return findings  # type: ignore
 
-    def __init__(self, word: str, oldword: str, idx: int) -> None:
-        super().__init__(word)
+    def __init__(self, word: str, words: List[str], oldword: str, idx: int) -> None:
+        super().__init__(word, words)
         self.oldword = oldword
         self.idx = idx
 
-    def get_message(self) -> str:
+    def custom_message(self) -> str:
         return 'Repetición de palabra con sufijo mente ("%s") %d palabras atrás: %s' %\
                 (self.word, self.idx, self.oldword)
 
@@ -137,40 +150,45 @@ class RepetitionFind(BaseFind):
         for idx, oldword in enumerate(words[-oldwords:-1]):  # type: ignore
             if oldword == word:
                 # findings.append(idx)
-                findings.append(RepetitionFind(word, oldwords - idx))  # type: ignore
+                findings.append(RepetitionFind(word, words, oldwords - idx))  # type: ignore
 
         return findings  # type: ignore
 
-    def __init__(self, word: str, idx: int) -> None:
-        super().__init__(word)
+    def __init__(self, word: str, words: List[str], idx: int) -> None:
+        super().__init__(word, words)
         self.idx = idx
 
-    def get_message(self) -> str:
+    def custom_message(self) -> str:
         return 'Repetición de palabra "%s" %d palabras atrás' %\
                 (self.word, self.idx)
 
 
 class ContainedFind(BaseFind):
+    min_size = 4
+
     # FIXME: compare against the root of the word.
     @staticmethod
     def check(word: str, words: List[str], oldwords=15) -> List[BaseFind]:
+        if len(word) < ContainedFind.min_size:
+            return []
+
         findings = []
         for idx, oldword in enumerate(words[-oldwords:-1]):  # type: ignore
-            if oldword in COMMON_WORDS:
+            if oldword in COMMON_WORDS or len(oldword) < ContainedFind.min_size:
                 continue
 
             if oldword and not oldword.endswith('mente') and oldword != word:
                 if word in oldword or oldword in word:
-                    findings.append(ContainedFind(word, oldword, idx))
+                    findings.append(ContainedFind(word, words, oldword, idx))
 
         return findings  # type: ignore
 
-    def __init__(self, word: str, oldword: str, idx: int) -> None:
-        super().__init__(word)
+    def __init__(self, word: str, words: List[str], oldword: str, idx: int) -> None:
+        super().__init__(word, words)
         self.oldword = oldword
         self.idx = idx
 
-    def get_message(self) -> str:
+    def custom_message(self) -> str:
         return 'Repetición de palabra contenida "%s" %d palabras atrás: %s' %\
                 (self.word, self.idx, self.oldword)
 
@@ -183,30 +201,20 @@ class SayWordsFind(BaseFind):
         findings: List[object] = []
 
         if word in USUALLY_PEDANTIC_SAYWORDS:
-            findings.append(PedanticSayFind(word))
+            findings.append(PedanticSayFind(word, words))
 
         if word in USUALLY_MISUSED_SAYWORDS:
-            findings.append(MisusedSayFind(word))
+            findings.append(MisusedSayFind(word, words))
 
         return findings  # type: ignore
 
-    def __init__(self, word: str) -> None:
-        super().__init__(word)
-
-
 class PedanticSayFind(SayWordsFind):
-    def __init__(self, word: str) -> None:
-        super().__init__(word)
-
-    def get_message(self) -> str:
+    def custom_message(self) -> str:
         return 'Verbo generalmente pedante en diálogos: %s' % self.word
 
 
 class MisusedSayFind(SayWordsFind):
-    def __init__(self, word: str) -> None:
-        super().__init__(word)
-
-    def get_message(self) -> str:
+    def custom_message(self) -> str:
         return 'Verbo generalmente mal usado en diálogos: %s' % self.word
 
 
@@ -220,14 +228,11 @@ class MisusedVerbFind(BaseFind):
                     if word == allowed:
                         return []
                 else:
-                    return [MisusedVerbFind(word)]
+                    return [MisusedVerbFind(word, words)]
 
         return []
 
-    def __init__(self, word: str) -> None:
-        super().__init__(word)
-
-    def get_message(self) -> str:
+    def custom_message(self) -> str:
         return 'Verbo generalmente mal usado: %s' % self.word
 
 
@@ -249,17 +254,17 @@ class MisusedExpressionFind(BaseFind):
                 prevcount += 1
             else:
                 # matched
-                return [MisusedExpressionFind(word, exp)]
+                return [MisusedExpressionFind(word, words, exp)]
 
         return []
 
-    def __init__(self, word: str, expression: List[str]) -> None:
-        super().__init__(word)
+    def __init__(self, word: str, words: List[str], expression: List[str]) -> None:
+        super().__init__(word, words)
         self.expression = expression
 
-    def get_message(self) -> str:
+    def custom_message(self) -> str:
         return 'Expression generalmente mal usada: %s' % ' '.join(reversed(self.expression))
 
 
 all_checks = [OverUsedFind, MenteFind, RepetitionFind, ContainedFind, SayWordsFind,
-          MisusedVerbFind, MisusedExpressionFind]
+              MisusedVerbFind, MisusedExpressionFind]
