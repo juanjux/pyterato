@@ -28,21 +28,25 @@ import pyterato.checks as checks
 #   config file.
 # - MyPy typing.
 
+
 def initialize():
     localContext = uno.getComponentContext()
     resolver = localContext.ServiceManager.createInstanceWithContext(
                     "com.sun.star.bridge.UnoUrlResolver", localContext )
     ctx = resolver.resolve( "uno:socket,host=localhost,port=8100;urp;StarOffice.ComponentContext" )
     smgr = ctx.ServiceManager
-    return smgr.createInstanceWithContext( "com.sun.star.frame.Desktop",ctx)
+    return smgr.createInstanceWithContext( "com.sun.star.frame.Desktop", ctx)
+
 
 class WordIterator:
-    def __init__(self, text, controller):
+    def __init__(self, text, controller, paging=True):
         self.text = text
         self.controller = controller
         self.cursor = text.createTextCursor()
         self.cursor.gotoStart(False)
-        self.view_cursor = self.controller.getViewCursor()
+        self.paging = paging
+        if paging:
+            self.view_cursor = self.controller.getViewCursor()
         self.prev_words = []
 
     def __iter__(self):
@@ -51,8 +55,12 @@ class WordIterator:
     def __next__(self):
         self.cursor.gotoEndOfWord(True)
         # FIXME: this line takes most of the time!
-        self.view_cursor.gotoRange(self.cursor, False)
-        page = self.view_cursor.getPage()
+        if self.paging:
+            self.view_cursor.gotoRange(self.cursor, False)
+            page = self.view_cursor.getPage()
+        else:
+            page = None
+
         word = ''.join(e for e in self.cursor.String.lower() if e.isalnum())
 
         self.prev_words.append(word)
@@ -60,9 +68,12 @@ class WordIterator:
             raise StopIteration
         return word, page
 
+
 def print_results(findings):
     for page in findings:
-        print('Página %d: ' % page)
+        if page is not None:
+            print('Página %d: ' % page)
+
         flist = findings[page]
         for typefindings in flist:
             for f in typefindings:
@@ -70,13 +81,13 @@ def print_results(findings):
 
         print()
 
+
 def main():
     desktop = initialize()
     model = desktop.getCurrentComponent()
-    text = model.Text
     controller = model.getCurrentController()
 
-    words = WordIterator(text, controller)
+    words = WordIterator(model.Text, controller, paging=False)
     findings = OrderedDict()
 
     for word, page in words:
@@ -102,6 +113,7 @@ def main():
                 findings[page].append(f)
 
     print_results(findings)
+
 
 if __name__ == '__main__':
     main()
