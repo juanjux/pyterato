@@ -1,10 +1,6 @@
-__all__ = ['COMMON_WORDS', 'check_mente', 'check_repetition',
-           'check_contained', 'check_saywords', 'check_verbs',
-           'check_expressions', 'check_overused']
-
 import abc
 from fnmatch import fnmatch
-from typing import List, Set, Tuple, Union, TypeVar, Generic
+from typing import List, Set, Tuple, Union, TypeVar, Generic, Any
 
 
 COMMON_WORDS: Set[str] = {
@@ -83,6 +79,11 @@ for exp in USUALLY_MISUSED_EXPRESSIONS:
 
 
 class BaseFind(abc.ABC):
+    @staticmethod
+    @abc.abstractmethod
+    def check(word: str, words: List[str]) -> List[Any]:
+        pass
+
     def __init__(self, word: str) -> None:
         self.word = word
 
@@ -93,18 +94,31 @@ class BaseFind(abc.ABC):
     def __str__(self) -> str:
         return self.get_message()
 
+
 class OverUsedFind(BaseFind):
+    @staticmethod
+    def check(word: str, words: List[str]) -> List[BaseFind]:
+        for overused in _OVERUSED_ALL:
+            if fnmatch(word, overused):
+                return [OverUsedFind(word)]
+        return []
+
     def get_message(self) -> str:
         return 'Palabras/verbos comodín: %s' % self.word
 
-def check_overused(word: str) -> List[OverUsedFind]:
-    for overused in _OVERUSED_ALL:
-        if fnmatch(word, overused):
-            return [OverUsedFind(word)]
-    return []
-
 
 class MenteFind(BaseFind):
+    @staticmethod
+    def check(word: str, words: List[str], oldwords=100) -> List[BaseFind]:
+        findings = []
+        if word != 'mente' and word.endswith('mente'):
+            for idx, oldword in enumerate(words[-oldwords:-1]):  # type: ignore
+                if oldword != 'mente' and oldword.endswith('mente'):
+                    # findings.append((oldword, idx))
+                    findings.append(MenteFind(word, oldword, oldwords - idx))  # type: ignore
+
+        return findings  # type: ignore
+
     def __init__(self, word: str, oldword: str, idx: int) -> None:
         super().__init__(word)
         self.oldword = oldword
@@ -115,19 +129,18 @@ class MenteFind(BaseFind):
                 (self.word, self.idx, self.oldword)
 
 
-def check_mente(word: str, words: List[str]) -> List[MenteFind]:
-    findings = []
-    if word != 'mente' and word.endswith('mente'):
-        for idx, oldword in enumerate(words[-check_mente.oldwords:-1]):  # type: ignore
-            if oldword != 'mente' and oldword.endswith('mente'):
-                # findings.append((oldword, idx))
-                findings.append(MenteFind(word, oldword, check_mente.oldwords - idx))  # type: ignore
-
-    return findings
-check_mente.oldwords = 100  # type: ignore
-
-
 class RepetitionFind(BaseFind):
+    @staticmethod
+    def check(word: str, words: List[str], oldwords=50) -> List[BaseFind]:
+        # FIXME: search for approximate words or words containing this too
+        findings = []
+        for idx, oldword in enumerate(words[-oldwords:-1]):  # type: ignore
+            if oldword == word:
+                # findings.append(idx)
+                findings.append(RepetitionFind(word, oldwords - idx))  # type: ignore
+
+        return findings  # type: ignore
+
     def __init__(self, word: str, idx: int) -> None:
         super().__init__(word)
         self.idx = idx
@@ -137,19 +150,21 @@ class RepetitionFind(BaseFind):
                 (self.word, self.idx)
 
 
-def check_repetition(word: str, words: str) -> List[RepetitionFind]:
-    # FIXME: search for approximate words or words containing this too
-    findings = []
-    for idx, oldword in enumerate(words[-check_repetition.oldwords:-1]):  # type: ignore
-        if oldword == word:
-            # findings.append(idx)
-            findings.append(RepetitionFind(word, check_repetition.oldwords - idx))  # type: ignore
-
-    return findings
-check_repetition.oldwords = 50  # type: ignore
-
-
 class ContainedFind(BaseFind):
+    # FIXME: compare against the root of the word.
+    @staticmethod
+    def check(word: str, words: List[str], oldwords=15) -> List[BaseFind]:
+        findings = []
+        for idx, oldword in enumerate(words[-oldwords:-1]):  # type: ignore
+            if oldword in COMMON_WORDS:
+                continue
+
+            if oldword and not oldword.endswith('mente') and oldword != word:
+                if word in oldword or oldword in word:
+                    findings.append(ContainedFind(word, oldword, idx))
+
+        return findings  # type: ignore
+
     def __init__(self, word: str, oldword: str, idx: int) -> None:
         super().__init__(word)
         self.oldword = oldword
@@ -160,51 +175,55 @@ class ContainedFind(BaseFind):
                 (self.word, self.idx, self.oldword)
 
 
-# FIXME: compare against the root of the word.
-def check_contained(word: str, words: List[str]) -> List[ContainedFind]:
-    findings = []
-    for idx, oldword in enumerate(words[-check_contained.oldwords:-1]):  # type: ignore
-        if oldword in COMMON_WORDS:
-            continue
+class SayWordsFind(BaseFind):
+    # FIXME: check for a "-" or the equivalent long version to check that we're
+    # probably in a dialog.
+    @staticmethod
+    def check(word: str, words: List[str]) -> List[BaseFind]:
+        findings: List[object] = []
 
-        if oldword and not oldword.endswith('mente') and oldword != word:
-            if word in oldword or oldword in word:
-                findings.append(ContainedFind(word, oldword, idx))
+        if word in USUALLY_PEDANTIC_SAYWORDS:
+            findings.append(PedanticSayFind(word))
 
-    return findings
-check_contained.oldwords = 15  # type: ignore
+        if word in USUALLY_MISUSED_SAYWORDS:
+            findings.append(MisusedSayFind(word))
+
+        return findings  # type: ignore
+
+    def __init__(self, word: str) -> None:
+        super().__init__(word)
 
 
-class PedanticSayFind(BaseFind):
+class PedanticSayFind(SayWordsFind):
     def __init__(self, word: str) -> None:
         super().__init__(word)
 
     def get_message(self) -> str:
         return 'Verbo generalmente pedante en diálogos: %s' % self.word
 
-class MisusedSayFind(BaseFind):
+
+class MisusedSayFind(SayWordsFind):
     def __init__(self, word: str) -> None:
         super().__init__(word)
 
     def get_message(self) -> str:
         return 'Verbo generalmente mal usado en diálogos: %s' % self.word
 
-# FIXME: check for a "-" or the equivalent long version to check that we're
-# probably in a dialog.
-# FIXME: check how to type a list with covariant types
-def check_saywords(word: str) -> List[object]:
-    findings: List[object] = []
-
-    if word in USUALLY_PEDANTIC_SAYWORDS:
-        findings.append(PedanticSayFind(word))
-
-    if word in USUALLY_MISUSED_SAYWORDS:
-        findings.append(MisusedSayFind(word))
-
-    return findings
-
 
 class MisusedVerbFind(BaseFind):
+    @staticmethod
+    def check(word: str, words: List[str]) -> List[BaseFind]:
+        for misused in USUALLY_MISUSED_VERB_ROOTS:
+            root = misused[0]
+            if word.startswith(root):
+                for allowed in misused[1:]:
+                    if word == allowed:
+                        return []
+                else:
+                    return [MisusedVerbFind(word)]
+
+        return []
+
     def __init__(self, word: str) -> None:
         super().__init__(word)
 
@@ -212,19 +231,28 @@ class MisusedVerbFind(BaseFind):
         return 'Verbo generalmente mal usado: %s' % self.word
 
 
-def check_verbs(word: str) -> List[MisusedVerbFind]:
-    for misused in USUALLY_MISUSED_VERB_ROOTS:
-        root = misused[0]
-        if word.startswith(root):
-            for allowed in misused[1:]:
-                if word == allowed:
-                    return []
+class MisusedExpressionFind(BaseFind):
+    @staticmethod
+    def check(word: str, words: List[str]) -> List[BaseFind]:
+        if word not in _USUALLY_MISUSED_EXPRESSIONS_LAST_WORDS:
+            return []
+
+        for exp in USUALLY_MISUSED_EXPRESSIONS:
+            if len(exp) > len(words) + 1 or not fnmatch(word, exp[0]):
+                continue
+
+            # match, check the previous words in the expression
+            prevcount = 2
+            for exp_word in exp[1:]:
+                if not fnmatch(words[-prevcount], exp_word):
+                    break
+                prevcount += 1
             else:
-                return [MisusedVerbFind(word)]
+                # matched
+                return [MisusedExpressionFind(word, exp)]
 
-    return []
+        return []
 
-class MisusedExpression(BaseFind):
     def __init__(self, word: str, expression: List[str]) -> None:
         super().__init__(word)
         self.expression = expression
@@ -232,22 +260,6 @@ class MisusedExpression(BaseFind):
     def get_message(self) -> str:
         return 'Expression generalmente mal usada: %s' % ' '.join(reversed(self.expression))
 
-def check_expressions(word: str, words: List[str]) -> List[MisusedExpression]:
-    if word not in _USUALLY_MISUSED_EXPRESSIONS_LAST_WORDS:
-        return []
 
-    for exp in USUALLY_MISUSED_EXPRESSIONS:
-        if len(exp) > len(words) + 1 or not fnmatch(word, exp[0]):
-            continue
-
-        # match, check the previous words in the expression
-        prevcount = 2
-        for exp_word in exp[1:]:
-            if not fnmatch(words[-prevcount], exp_word):
-                break
-            prevcount += 1
-        else:
-            # matched
-            return [MisusedExpression(word, exp)]
-
-    return []
+all_checks = [OverUsedFind, MenteFind, RepetitionFind, ContainedFind, SayWordsFind,
+          MisusedVerbFind, MisusedExpressionFind]
