@@ -4,10 +4,6 @@ from fnmatch import fnmatch
 from pprint import pprint
 from collections import OrderedDict
 
-import uno
-from unotools import Socket, connect
-from unotools.component.writer import Writer
-
 import pyterato.checks as checks
 
 # TODO:
@@ -29,33 +25,38 @@ import pyterato.checks as checks
 # - MyPy typing.
 
 
-def initialize():
-    localContext = uno.getComponentContext()
-    resolver = localContext.ServiceManager.createInstanceWithContext(
-                    "com.sun.star.bridge.UnoUrlResolver", localContext )
-    ctx = resolver.resolve( "uno:socket,host=localhost,port=8100;urp;StarOffice.ComponentContext" )
-    smgr = ctx.ServiceManager
-    return smgr.createInstanceWithContext( "com.sun.star.frame.Desktop", ctx)
+class LibreOfficeWordIterator:
 
-
-class WordIterator:
-    def __init__(self, text, controller, paging=True):
-        self.text = text
-        self.controller = controller
-        self.cursor = text.createTextCursor()
+    def __init__(self, paging=True):
+        model, controller = self._initialize_OO()
+        self.cursor = model.Text.createTextCursor()
         self.cursor.gotoStart(False)
         self.paging = paging
         if paging:
-            self.view_cursor = self.controller.getViewCursor()
+            self.view_cursor = controller.getViewCursor()
         self.prev_words = []
+
+
+    def _initialize_OO(self):
+        import uno
+
+        localContext = uno.getComponentContext()
+        resolver = localContext.ServiceManager.createInstanceWithContext(
+                        "com.sun.star.bridge.UnoUrlResolver", localContext )
+        ctx = resolver.resolve( "uno:socket,host=localhost,port=8100;urp;StarOffice.ComponentContext" )
+        smgr = ctx.ServiceManager
+        desktop = smgr.createInstanceWithContext( "com.sun.star.frame.Desktop", ctx)
+        model = desktop.getCurrentComponent()
+        return model, model.getCurrentController()
+
 
     def __iter__(self):
         return self
 
     def __next__(self):
         self.cursor.gotoEndOfWord(True)
-        # FIXME: this line takes most of the time!
         if self.paging:
+            # FIXME: this line takes most of the time!
             self.view_cursor.gotoRange(self.cursor, False)
             page = self.view_cursor.getPage()
         else:
@@ -83,11 +84,7 @@ def print_results(findings):
 
 
 def main():
-    desktop = initialize()
-    model = desktop.getCurrentComponent()
-    controller = model.getCurrentController()
-
-    words = WordIterator(model.Text, controller, paging=False)
+    words = LibreOfficeWordIterator(paging=False)
     findings = OrderedDict()
 
     for word, page in words:
