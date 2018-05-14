@@ -30,7 +30,7 @@ setup(
             "pyterato = pyterato.cli:main"
         ]
     },
-    install_requires = ["unotools"],
+    install_requires = [],
     extras_require = {},
     classifiers = [
         "Development Status :: 3 - Alpha",

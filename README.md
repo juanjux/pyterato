@@ -7,23 +7,31 @@ literarios en Español.
 
 ## Instalación
 
-Tienes que instalar OpenOffice o LibreOffice (realmente sólo lo he probado con 
-LibreOffice). También requiere el paquete script-provider-python.
-
-En Ubuntu eso se haría de la siguiente forma:
-
-```bash
-sudo apt install libreoffice libreoffice-script-provider-python uno-libs3 python3-uno python3
-pip3 install unotools
-```
-
-Una vez hecho eso, ya puedes instalar pyterato usando pip:
-
 ```
 pip3 install pyterato
 ```
 
+Para que pueda analizar textos de una instancia abierta de Open/LibreOffice, hay
+que instalar varias dependencias relaccionadas con el mismo. En Ubuntu eso se
+haría de la siguiente forma:
+
+```bash
+sudo apt install libreoffice libreoffice-script-provider-python uno-libs3 python3-uno python3
+
+pip3 install unotools
+```
+
 ## Uso
+
+### Opción 1: Fichero de texto plano
+
+- Ejecuta: `pyterato [nombre_de_fichero.txt]`.
+
+También puede leer de la entrada estándar:
+
+`cat fichero.txt | pyterato`
+
+### Opción 2: LibreOffice
 
 - Abre LibreOffice con el siguiente comando:
 
@@ -33,15 +41,11 @@ soffice --accept='socket,host=localhost,port=8100;urp;StarOffice.Service'
 
 - En LibreOffice, abre el documento que quieres examinar.
 
-- Ejecuta pyterato (con Python3):
+- Ejecuta `pyterato --libreoffice` (con Python3):
 
-```bash
-python3 pyterato.py
-```
+## Sobre los resultados
 
-- Corrige errores...
-
-Considera la mayoría de los mensajes como advertencias; actualmente el script
+Considera la mayoría de los mensajes como advertencias o consejos; actualmente el script
 está en un estado muy inicial y simplemente comprueba usos de palabras (no tiene
 aún procesado de lenguaje natural) por lo que en muchas ocasiones producirá falsos
 positivos. Usa tu sentido común para determinar si las correcciones indicadas se
