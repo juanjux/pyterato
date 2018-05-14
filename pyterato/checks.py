@@ -124,11 +124,13 @@ class MenteFind(BaseFind):
     @staticmethod
     def check(word: str, words: List[str], oldwords=100) -> List[BaseFind]:
         findings = []
+        numprev = min(oldwords, len(words))
+
         if word != 'mente' and word.endswith('mente'):
-            for idx, oldword in enumerate(words[-oldwords:-1]):  # type: ignore
+            for idx, oldword in enumerate(words[-numprev:-1]):  # type: ignore
                 if oldword != 'mente' and oldword.endswith('mente'):
                     # findings.append((oldword, idx))
-                    findings.append(MenteFind(word, words, oldword, oldwords - idx))  # type: ignore
+                    findings.append(MenteFind(word, words, oldword, numprev - idx - 1))  # type: ignore
 
         return findings  # type: ignore
 
@@ -147,11 +149,11 @@ class RepetitionFind(BaseFind):
     def check(word: str, words: List[str], oldwords=50) -> List[BaseFind]:
         # FIXME: search for approximate words or words containing this too
         findings = []
-        for idx, oldword in enumerate(words[-oldwords:-1]):  # type: ignore
+        numprev = min(oldwords, len(words))
+
+        for idx, oldword in enumerate(words[-numprev:-1]):  # type: ignore
             if oldword == word:
-                # findings.append(idx)
-                print('XXX idx: ', idx)
-                findings.append(RepetitionFind(word, words, oldwords - idx))  # type: ignore
+                findings.append(RepetitionFind(word, words, numprev - idx - 1))  # type: ignore
 
         return findings  # type: ignore
 
@@ -174,13 +176,15 @@ class ContainedFind(BaseFind):
             return []
 
         findings = []
-        for idx, oldword in enumerate(words[-oldwords:-1]):  # type: ignore
+        numprev = min(oldwords, len(words))
+
+        for idx, oldword in enumerate(words[-numprev:-1]):  # type: ignore
             if oldword in COMMON_WORDS or len(oldword) < ContainedFind.min_size:
                 continue
 
             if oldword and not oldword.endswith('mente') and oldword != word:
                 if word in oldword or oldword in word:
-                    findings.append(ContainedFind(word, words, oldword, idx))
+                    findings.append(ContainedFind(word, words, oldword, idx - 1))
 
         return findings  # type: ignore
 
