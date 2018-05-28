@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import sys
 from collections import OrderedDict
 from typing import Iterable, List
 
@@ -11,16 +12,15 @@ import pyterato.checks as checks
 # - Show the results in LibreOffice
 # - Factorize the looping over old words so it's only done once for every new word
 #   (checking if the index applies for every check).
-# - Add explanation and examples of bad/good usage for usually missused saywords.
-# - Detect dialogs for the saywords checker.
-# - Detect saywords conjugations.
+# - Add explanation and suggest replacements.
+# - Detect dialog markers (--) for the saywords checker.
+# - Detect verb conjugations.
 # - Check contained: normalize accents
 # - Check: intransitive verbs used as transitive (tamborilear).
 # - See if there is any way to optimize the word by word iteration while keeping the
 #   page number (the current method it's pretty slow on the LibreOffice side).
 # - Way to disable or enable checks individually using command line parameters or a
 #   config file.
-# - MyPy typing.
 
 
 def print_results(findings) -> None:
@@ -70,9 +70,19 @@ def parse_arguments() -> argparse.Namespace:
             help='Con --libreoffice, indicar las páginas de los errores con (lento).'
     )
     parser.add_argument(
-            'file',
-            nargs='?',
+            '-d', '--disable',
             type=str,
+            help='Desactivar tests específicos (separados por comas).'
+    )
+    parser.add_argument(
+            '-e', '--enable',
+            type=str,
+            help='Activar solo tests especificos (separados por comas).'
+    )
+    parser.add_argument(
+            'file',
+            type=str,
+            nargs='?',
             help='Fichero fuente de entrada (no se necesita con --libreoffice). ' +
                  'Si no se indica se usará stdin.'
     )
@@ -81,11 +91,23 @@ def parse_arguments() -> argparse.Namespace:
     if not args.txt and not args.libreoffice:
         args.txt = True
 
+    # FIXME: unittest this!
+    if args.disable and args.enable:
+        print('--disable y --enable no pueden activarse a a la vez')
+        parser.print_help()
+        sys.exit(1)
+
     return parser.parse_args()
 
 
 def main() -> int:
     options = parse_arguments()
+
+    disable_list = set([i.strip() for i in options.disable.split(',')]) if options.disable else set()
+    enable_list = set([i.strip() for i in options.enable.split(',')]) if options.enable else set()
+    options.disable = bool(options.disable)
+    options.enable = bool(options.enable)
+
     if options.libreoffice:
         from pyterato.worditerator_lo import LibreOfficeWordIterator
         words = LibreOfficeWordIterator(paging=options.lo_paging)  # type: ignore
@@ -107,6 +129,14 @@ def main() -> int:
             sym = getattr(checks, symname)
 
             if hasattr(sym, '__bases__') and checks.BaseFind in sym.__bases__:
+                code = sym.code()
+
+                if options.enable and code not in enable_list:
+                    continue
+
+                if options.disable and code in disable_list:
+                    continue
+
                 res = sym.check(word, words.prev_words)
                 if len(res):
                     findings[page].append(res)

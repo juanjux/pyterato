@@ -119,27 +119,32 @@ class BaseFind(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def check(word: str, words: List[str]) -> List[Any]:
-        pass
+    def check(word: str, words: List[str]) -> List[Any]: pass
 
     def __init__(self, word: str, words: List[str]) -> None:
         self.word = word
         self.context = ' '.join(words[-self.context_size:])
 
-    @abc.abstractmethod
-    def custom_message(self) -> str:
-        pass
+    @classmethod
+    def code(cls) -> str:
+        return cls.__name__.lower()[:-4]
 
-    def get_message(self) -> str:
-        return (SEPARATOR + os.linesep +
-                self.custom_message() + os.linesep +
+    @property
+    @abc.abstractmethod
+    def custom_message(self) -> str: pass
+
+    @property
+    def message(self) -> str:
+        return (SEPARATOR + ' [%s]' % self.code() + os.linesep +
+                self.custom_message + os.linesep +
                 'Contexto: ...' + self.context + '...')
 
     def __str__(self) -> str:
-        return self.get_message()
+        return self.message
 
 
 class OverUsedFind(BaseFind):
+
     @staticmethod
     def check(word: str, words: List[str]) -> List[BaseFind]:
         for overused in _OVERUSED_ALL:
@@ -147,6 +152,7 @@ class OverUsedFind(BaseFind):
                 return [OverUsedFind(word, words)]
         return []
 
+    @property
     def custom_message(self) -> str:
         return 'Palabras/verbos comodín: %s' % self.word
 
@@ -169,6 +175,7 @@ class MenteFind(BaseFind):
         self.oldword = oldword
         self.idx = idx
 
+    @property
     def custom_message(self) -> str:
         return 'Repetición de palabra con sufijo mente ("%s") %d palabras atrás: %s' %\
                 (self.word, self.idx, self.oldword)
@@ -191,6 +198,7 @@ class RepetitionFind(BaseFind):
         super().__init__(word, words)
         self.idx = idx
 
+    @property
     def custom_message(self) -> str:
         return 'Repetición de palabra "%s" %d palabras atrás' %\
                 (self.word, self.idx)
@@ -223,6 +231,7 @@ class ContainedFind(BaseFind):
         self.oldword = oldword
         self.idx = idx
 
+    @property
     def custom_message(self) -> str:
         return 'Repetición de palabra contenida "%s" %d palabras atrás: %s' %\
                 (self.word, self.idx, self.oldword)
@@ -245,11 +254,22 @@ class SayWordsFind(BaseFind):
 
 
 class PedanticSayFind(SayWordsFind):
+    @property
+
+    @classmethod
+    def code(cls) -> str:
+        return 'saywords'
+
     def custom_message(self) -> str:
         return 'Verbo generalmente pedante en diálogos: %s' % self.word
 
 
 class MisusedSayFind(SayWordsFind):
+    @classmethod
+    def code(cls) -> str:
+        return 'saywords'
+
+    @property
     def custom_message(self) -> str:
         return 'Verbo generalmente mal usado en diálogos: %s' % self.word
 
@@ -268,6 +288,7 @@ class MisusedVerbFind(BaseFind):
 
         return []
 
+    @property
     def custom_message(self) -> str:
         return 'Verbo generalmente mal usado: %s' % self.word
 
@@ -298,6 +319,7 @@ class MisusedExpressionFind(BaseFind):
         super().__init__(word, words)
         self.expression = expression
 
+    @property
     def custom_message(self) -> str:
         return 'Expression generalmente mal usada: %s' % ' '.join(reversed(self.expression))
 
