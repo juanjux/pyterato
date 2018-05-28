@@ -1,8 +1,11 @@
+from typing import Tuple, Optional, Any, List
+
 from pyterato.worditerator_base import BaseWordIterator
+
 
 class LibreOfficeWordIterator(BaseWordIterator):
 
-    def __init__(self, paging=True):
+    def __init__(self, paging=True) -> None:
         super().__init__()
 
         model, controller = self._initialize_OO()
@@ -12,8 +15,7 @@ class LibreOfficeWordIterator(BaseWordIterator):
         if paging:
             self.view_cursor = controller.getViewCursor()
 
-
-    def _initialize_OO(self):
+    def _initialize_OO(self) -> Tuple[Any, Any]:
         import uno
 
         localContext = uno.getComponentContext()
@@ -25,11 +27,10 @@ class LibreOfficeWordIterator(BaseWordIterator):
         model = desktop.getCurrentComponent()
         return model, model.getCurrentController()
 
-
-    def __iter__(self):
+    def __iter__(self) -> BaseWordIterator:
         return self
 
-    def __next__(self):
+    def __next__(self) -> Tuple[str, Optional[int]]:
         self.cursor.gotoEndOfWord(True)
         if self.paging:
             # FIXME: this line takes most of the time!
@@ -46,5 +47,5 @@ class LibreOfficeWordIterator(BaseWordIterator):
         return word, page
 
     @property
-    def prev_words(self):
+    def prev_words(self) -> List[str]:
         return self._prev_words

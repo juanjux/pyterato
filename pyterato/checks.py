@@ -1,7 +1,7 @@
 import abc
 import os
 from fnmatch import fnmatch
-from typing import List, Set, Tuple, Union, TypeVar, Generic, Any
+from typing import List, Set, Tuple, Any
 
 
 COMMON_WORDS: Set[str] = {
@@ -12,7 +12,7 @@ COMMON_WORDS: Set[str] = {
         "unas", "con", "ante", "ya", "para", "sin", "mas", "más", "habeis",
         "serían", "sería", "en", "por", "mi", "mis", "si", "sí", "no", "hasta", "su",
         "mi", "sus", "tus", "sobre", "del", "a", "e", "pero", "había", "habías", "habían",
-        "habría", "habrías",  "habrían", "ser", "al", "sido", "haya", "otra", "me", "te",
+        "habría", "habrías", "habrían", "ser", "al", "sido", "haya", "otra", "me", "te",
         "dijo", "dije", "preguntó", "pregunté", "ni", "les", "hecho",
         "donde", "da", "dan", "das", "cuando", "donde", "os", "vuestros", "vuestras",
         "vosotros", "vosotras", "algo", "muy", "mas", "menos", "entre", "tras", "aún",
@@ -83,6 +83,7 @@ for exp in USUALLY_MISUSED_EXPRESSIONS:
 
 SEPARATOR = '=' * 20
 
+
 class BaseFind(abc.ABC):
     context_size = 6
 
@@ -123,13 +124,12 @@ class OverUsedFind(BaseFind):
 class MenteFind(BaseFind):
     @staticmethod
     def check(word: str, words: List[str], oldwords=100) -> List[BaseFind]:
-        findings = []
+        findings: List[MenteFind] = []
         numprev = min(oldwords, len(words))
 
         if word != 'mente' and word.endswith('mente'):
             for idx, oldword in enumerate(words[-numprev:-1]):  # type: ignore
                 if oldword != 'mente' and oldword.endswith('mente'):
-                    # findings.append((oldword, idx))
                     findings.append(MenteFind(word, words, oldword, numprev - idx - 1))  # type: ignore
 
         return findings  # type: ignore
@@ -148,7 +148,7 @@ class RepetitionFind(BaseFind):
     @staticmethod
     def check(word: str, words: List[str], oldwords=50) -> List[BaseFind]:
         # FIXME: search for approximate words or words containing this too
-        findings = []
+        findings: List[RepetitionFind] = []
         numprev = min(oldwords, len(words))
 
         for idx, oldword in enumerate(words[-numprev:-1]):  # type: ignore
@@ -175,7 +175,7 @@ class ContainedFind(BaseFind):
         if len(word) < ContainedFind.min_size:
             return []
 
-        findings = []
+        findings: List[ContainedFind] = []
         numprev = min(oldwords, len(words))
 
         for idx, oldword in enumerate(words[-numprev:-1]):  # type: ignore
@@ -203,7 +203,7 @@ class SayWordsFind(BaseFind):
     # probably in a dialog.
     @staticmethod
     def check(word: str, words: List[str]) -> List[BaseFind]:
-        findings: List[object] = []
+        findings: List[BaseFind] = []
 
         if word in USUALLY_PEDANTIC_SAYWORDS:
             findings.append(PedanticSayFind(word, words))
@@ -212,6 +212,7 @@ class SayWordsFind(BaseFind):
             findings.append(MisusedSayFind(word, words))
 
         return findings  # type: ignore
+
 
 class PedanticSayFind(SayWordsFind):
     def custom_message(self) -> str:

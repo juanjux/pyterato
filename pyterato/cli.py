@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 
-import abc
 import argparse
 import os
-import sys
-from fnmatch import fnmatch
-from pprint import pprint
 from collections import OrderedDict
+from typing import Iterable, List
 
 import pyterato.checks as checks
 
@@ -26,7 +23,7 @@ import pyterato.checks as checks
 # - MyPy typing.
 
 
-def print_results(findings):
+def print_results(findings) -> None:
     total = 0
     for page in findings:
         if page is not None:
@@ -42,7 +39,7 @@ def print_results(findings):
     print('Total: %d avisos emitidos' % total)
 
 
-def parse_arguments():
+def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
@@ -87,35 +84,36 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def main():
+def main() -> int:
     options = parse_arguments()
+    print(type(options))
     if options.libreoffice:
         from pyterato.worditerator_lo import LibreOfficeWordIterator
-        words = LibreOfficeWordIterator(paging=options.lo_paging)
+        words = LibreOfficeWordIterator(paging=options.lo_paging)  # type: ignore
     else:
         from pyterato.worditerator_txtfile import TxtFileWordIterator
-        words = TxtFileWordIterator(options.file)
+        words = TxtFileWordIterator(options.file)  # type: ignore
 
-    findings = OrderedDict()
+    findings: OrderedDict[int, object] = OrderedDict()
 
-    for word, page in words:
+    for word, page in Iterable, words:  # type: ignore
         if not word or word in checks.COMMON_WORDS:
             continue
 
-        tmpfindings = []
+        tmpfindings: List[List[checks.BaseFind]] = []
 
         if page not in findings:
             findings[page] = []
 
         for cls in checks.all_checks:
-            tmpfindings.append(cls.check(word, words.prev_words))
+            tmpfindings.append(cls.check(word, words.prev_words))  # type: ignore
 
-        # print(tmpfindings)
         for f in tmpfindings:
             if len(f):
-                findings[page].append(f)
+                findings[page].append(f)  # type: ignore
 
     print_results(findings)
+    return 0
 
 
 if __name__ == '__main__':

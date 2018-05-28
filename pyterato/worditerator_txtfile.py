@@ -1,9 +1,10 @@
 import sys
+from typing import Tuple, Optional
 
 from pyterato.worditerator_base import BaseWordIterator
 
-class TxtFileWordIterator(BaseWordIterator):
 
+class TxtFileWordIterator(BaseWordIterator):
     # FIXME: read by line, maybe using the file own (line) iterator
     def __init__(self, fname: str) -> None:
         super().__init__()
@@ -17,7 +18,7 @@ class TxtFileWordIterator(BaseWordIterator):
 
         self.words = self.text.split()
 
-    def __next__(self):
+    def __next__(self) -> Tuple[str, Optional[int]]:
         if not self.words:
             raise StopIteration
 
