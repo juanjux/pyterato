@@ -86,7 +86,6 @@ def parse_arguments() -> argparse.Namespace:
 
 def main() -> int:
     options = parse_arguments()
-    print(type(options))
     if options.libreoffice:
         from pyterato.worditerator_lo import LibreOfficeWordIterator
         words = LibreOfficeWordIterator(paging=options.lo_paging)  # type: ignore
@@ -96,7 +95,7 @@ def main() -> int:
 
     findings: OrderedDict[int, object] = OrderedDict()
 
-    for word, page in Iterable, words:  # type: ignore
+    for word, page in words:  # type: ignore
         if not word or word in checks.COMMON_WORDS:
             continue
 
@@ -105,8 +104,11 @@ def main() -> int:
         if page not in findings:
             findings[page] = []
 
-        for cls in checks.all_checks:
-            tmpfindings.append(cls.check(word, words.prev_words))  # type: ignore
+        # call check on all classes in the check module inheriting from BaseFind
+        for symname in checks.__dict__.keys():
+            sym = getattr(checks, symname)
+            if hasattr(sym, '__bases__') and checks.BaseFind in sym.__bases__:
+                tmpfindings.append(sym.check(word, words.prev_words))  # type: ignore
 
         for f in tmpfindings:
             if len(f):
