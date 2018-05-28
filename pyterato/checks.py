@@ -76,6 +76,36 @@ USUALLY_MISUSED_EXPRESSIONS: List[List[str]] = [
 for i in USUALLY_MISUSED_EXPRESSIONS:
     i.reverse()
 
+CALCO_EXPRESSIONS: List[List[str]] = [
+        ["h*", "lo", "correcto"],  # hacer lo debido, hacer el bien, etc
+        ["al", "final", "del", "dia"],
+        ["jug*", "*", "culo*"],  # jugarse la piel
+        ["quit*", "el", "culo"],  # largate
+        ["esta", "todo", "bien"],  # todo va bien
+        ["esta", "todo", "correcto"],  # ditto
+        ["todo", "lo", "que", "ten*", "que"],  # lo unico, solo, etc
+        ["tan", "simple", "como"],  # es sencillo, en pocas palabras, en resumen...
+        ["es", "donde", "pertenez*"],  # es mi casa, es mi pais, etc
+        ["dame", "un", "respiro"],  # no me agobies, no me atosigues, dejame en paz
+        ["condescend*"],  # desprecio (excepto cuando es "dejar hacer")
+        ["suma", "decente"],  # cantidad considerable
+        ["cantidad", "decente"],  # ditto
+        ["devocion"],  # lealtad, afecto (solo correcto en contexto religioso)
+        ["eventualmente"],  # al final, finalmente, a la larga
+        ["excit*"],  # emocionado, entusiasmado, ilusionado (correcto en contexto sexual o quimico)
+        ["un", "fraude"],  # farsante, impostor, tramposo
+        ["interpone*", "en", "*", "camino"],  # ponerse en medio, estorbar
+        ["h*", "el", "macho"],  # hacerse el duro
+        ["orgullosa", "historia"],  # gloriosa historia (proud inanimado)
+        ["rango"],  # graduacion (excepto en matematicas y otras ciencias)
+        ["entrega", "especial"],  # entrega urgente
+        ["maldicion"],  # muchas opciones...
+        ["jodidamente"],  # ditto
+        ["lo", "hici*s"],  # lo conseguimos (correcto en el contexto de fabricar o crear, no en el de conseguir hacer algo)
+]
+for i in CALCO_EXPRESSIONS:
+    i.reverse()
+
 # To optimize lookups of new potential expressions:
 _USUALLY_MISUSED_EXPRESSIONS_LAST_WORDS = set()
 for exp in USUALLY_MISUSED_EXPRESSIONS:
