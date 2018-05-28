@@ -1,0 +1,4 @@
+.mypy_cache/
+pyterato.egg-info/
+*.pyc
+dist/

@@ -93,13 +93,11 @@ def main() -> int:
         from pyterato.worditerator_txtfile import TxtFileWordIterator
         words = TxtFileWordIterator(options.file)  # type: ignore
 
-    findings: OrderedDict[int, object] = OrderedDict()
+    findings: OrderedDict[int, List[object]] = OrderedDict()
 
     for word, page in words:  # type: ignore
         if not word or word in checks.COMMON_WORDS:
             continue
-
-        tmpfindings: List[List[checks.BaseFind]] = []
 
         if page not in findings:
             findings[page] = []
@@ -107,12 +105,11 @@ def main() -> int:
         # call check on all classes in the check module inheriting from BaseFind
         for symname in checks.__dict__.keys():
             sym = getattr(checks, symname)
-            if hasattr(sym, '__bases__') and checks.BaseFind in sym.__bases__:
-                tmpfindings.append(sym.check(word, words.prev_words))  # type: ignore
 
-        for f in tmpfindings:
-            if len(f):
-                findings[page].append(f)  # type: ignore
+            if hasattr(sym, '__bases__') and checks.BaseFind in sym.__bases__:
+                res = sym.check(word, words.prev_words)
+                if len(res):
+                    findings[page].append(res)
 
     print_results(findings)
     return 0
