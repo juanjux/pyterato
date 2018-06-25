@@ -3,6 +3,7 @@ import os
 from fnmatch import fnmatch
 from typing import List, Set, Tuple, Any
 
+# XXX FIXME: chance List[List] to Tuple[Tuple]
 
 COMMON_WORDS: Set[str] = {
         "el", "él", "lo", "la", "le", "los", "las", "que", "qué", "cual", "cuál",
@@ -73,6 +74,7 @@ USUALLY_MISUSED_EXPRESSIONS: List[List[str]] = [
         ["esta*", "de", "pie"], ["esta*", "sentad*"],
         ["encontr*", "de", "pie"], ["encontr*", "sentad*"],
 ]
+
 for i in USUALLY_MISUSED_EXPRESSIONS:
     i.reverse()
 
@@ -104,6 +106,10 @@ CALCO_EXPRESSIONS: List[List[str]] = [
         ["lo", "hici*s"],  # lo conseguimos (correcto en el contexto de fabricar o crear, no en el de conseguir hacer algo)
 ]
 for i in CALCO_EXPRESSIONS:
+    i.reverse()
+
+from cliche_list import CLICHE_LINES
+for i in CLICHE_LINES:
     i.reverse()
 
 # To optimize lookups of new potential expressions:
