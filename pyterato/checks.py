@@ -1,9 +1,9 @@
 import abc
 import os
+import pyterato.cliche_expr as cliche_expr
 from fnmatch import fnmatch
 from typing import List, Set, Tuple, Any
 
-# XXX FIXME: chance List[List] to Tuple[Tuple]
 
 COMMON_WORDS: Set[str] = {
         "el", "él", "lo", "la", "le", "los", "las", "que", "qué", "cual", "cuál",
@@ -29,7 +29,7 @@ COMMON_WORDS: Set[str] = {
 
 # First element is the root and others are non verbal words (thus allowed)
 # FIXME: check the sufix for verbal conjugations
-USUALLY_MISUSED_VERB_ROOTS: List[Tuple[str, ...]] = [
+USUALLY_MISUSED_VERB_ROOTS: Tuple[Tuple[str, ...], ...] = (
         ("espet", "espeto", "espetos"),
         ("mascull",),
         ("perl", "perla", "perlas"),
@@ -38,7 +38,7 @@ USUALLY_MISUSED_VERB_ROOTS: List[Tuple[str, ...]] = [
         ("manten", "mantenido", "mantenida", "mantenidos", "mantenidas"),
         ("mantuv",),
         ("tamboril", "tamborilero", "tamborilera", "tamborileros", "tamborileras"),
-]
+)
 
 # Words too frecuently used that usually have lots of more proper synonymous
 OVERUSED_WORDS: Set[str] = {
@@ -65,7 +65,7 @@ USUALLY_MISUSED_SAYWORDS: Set[str] = {
 }
 
 # These are in reverse order. Last word can't use a pattern.
-USUALLY_MISUSED_EXPRESSIONS: List[List[str]] = [
+USUALLY_MISUSED_EXPR: Tuple[List[str], ...] = (
         ["sacud*", "la", "cabeza"],
         ["perlab*", "*", "frente"],
         ["provoc*", "*", "polémica"],
@@ -73,12 +73,18 @@ USUALLY_MISUSED_EXPRESSIONS: List[List[str]] = [
         ["qued*", "de", "pie"], ["qued*", "sentad*"],
         ["esta*", "de", "pie"], ["esta*", "sentad*"],
         ["encontr*", "de", "pie"], ["encontr*", "sentad*"],
-]
+)
 
-for i in USUALLY_MISUSED_EXPRESSIONS:
+for i in USUALLY_MISUSED_EXPR:
     i.reverse()
 
-CALCO_EXPRESSIONS: List[List[str]] = [
+# To optimize lookups of new potential expressions:
+_USUALLY_MISUSED_EXPR_LAST_WORDS = set()
+for exp in USUALLY_MISUSED_EXPR:
+    _USUALLY_MISUSED_EXPR_LAST_WORDS.add(exp[0])
+
+
+CALCO_EXPR: Tuple[List[str], ...] = (
         ["h*", "lo", "correcto"],  # hacer lo debido, hacer el bien, etc
         ["al", "final", "del", "dia"],
         ["jug*", "*", "culo*"],  # jugarse la piel
@@ -104,18 +110,14 @@ CALCO_EXPRESSIONS: List[List[str]] = [
         ["maldicion"],  # muchas opciones...
         ["jodidamente"],  # ditto
         ["lo", "hici*s"],  # lo conseguimos (correcto en el contexto de fabricar o crear, no en el de conseguir hacer algo)
-]
-for i in CALCO_EXPRESSIONS:
+)
+for i in CALCO_EXPR:
     i.reverse()
 
-from cliche_list import CLICHE_LINES
-for i in CLICHE_LINES:
-    i.reverse()
+_CALCO_EXPR_LAST_WORDS = set()
+for exp in CALCO_EXPR:
+    _CALCO_EXPR_LAST_WORDS.add(exp[0])
 
-# To optimize lookups of new potential expressions:
-_USUALLY_MISUSED_EXPRESSIONS_LAST_WORDS = set()
-for exp in USUALLY_MISUSED_EXPRESSIONS:
-    _USUALLY_MISUSED_EXPRESSIONS_LAST_WORDS.add(exp[0])
 
 SEPARATOR = '=' * 20
 
@@ -125,7 +127,8 @@ class BaseFind(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def check(word: str, words: List[str]) -> List[Any]: pass
+    def check(word: str, words: List[str]) -> List[Any]:
+        pass
 
     def __init__(self, word: str, words: List[str]) -> None:
         self.word = word
@@ -137,7 +140,8 @@ class BaseFind(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def custom_message(self) -> str: pass
+    def custom_message(self) -> str:
+        pass
 
     @property
     def message(self) -> str:
@@ -261,7 +265,6 @@ class SayWordsFind(BaseFind):
 
 class PedanticSayFind(SayWordsFind):
     @property
-
     @classmethod
     def code(cls) -> str:
         return 'saywords'
@@ -281,6 +284,10 @@ class MisusedSayFind(SayWordsFind):
 
 
 class MisusedVerbFind(BaseFind):
+    @classmethod
+    def code(cls) -> str:
+        return 'misused_verb'
+
     @staticmethod
     def check(word: str, words: List[str]) -> List[BaseFind]:
         for misused in USUALLY_MISUSED_VERB_ROOTS:
@@ -299,14 +306,81 @@ class MisusedVerbFind(BaseFind):
         return 'Verbo generalmente mal usado: %s' % self.word
 
 
+def check_expr_list(word: str, words: List[str], words_set: Set[str],
+        expr_list: List[List[str]], find_cls: Any) -> List[BaseFind]:
+
+    if word not in words_set:
+        return []
+
+    for exp in expr_list:
+        if not fnmatch(word, exp[0]) or len(exp) > len(words) + 1:
+            continue
+
+        # match, check the previous words in the expression
+        prevcount = 2
+        for exp_word in exp[1:]:
+            if not fnmatch(words[-prevcount], exp_word):
+                break
+            prevcount += 1
+        else:
+            # matched
+            return [find_cls(word, words, exp)]
+
+    return []
+
+
 class MisusedExpressionFind(BaseFind):
+    @classmethod
+    def code(cls) -> str:
+        return 'misused_expr'
+
     @staticmethod
     def check(word: str, words: List[str]) -> List[BaseFind]:
-        if word not in _USUALLY_MISUSED_EXPRESSIONS_LAST_WORDS:
+        return check_expr_list(word, words, _USUALLY_MISUSED_EXPR_LAST_WORDS,
+                               USUALLY_MISUSED_EXPR, MisusedExpressionFind)
+
+    def __init__(self, word: str, words: List[str], expression: List[str]) -> None:
+        super().__init__(word, words)
+        self.expression = expression
+
+    @property
+    def custom_message(self) -> str:
+        return 'Expresión generalmente mal usada: %s' % ' '.join(reversed(self.expression))
+
+
+class CalcoFind(BaseFind):
+    @classmethod
+    def code(cls) -> str:
+        return 'calco'
+
+    @staticmethod
+    def check(word: str, words: List[str]) -> List[BaseFind]:
+        return check_expr_list(word, words, _CALCO_EXPR_LAST_WORDS,
+                               CALCO_EXPR, CalcoFind)
+
+    def __init__(self, word: str, words: List[str], expression: List[str]) -> None:
+        super().__init__(word, words)
+        self.expression = expression
+
+    @property
+    def custom_message(self) -> str:
+        return 'Calco / extranjerismo: %s' % ' '.join(reversed(self.expression))
+
+
+class ClicheFind(BaseFind):
+
+    @classmethod
+    def code(cls) -> str:
+        return 'cliche'
+
+    @staticmethod
+    def check(word: str, words: List[str]) -> List[BaseFind]:
+        expr_list = cliche_expr.get_fistword_exprs(word)
+        if not expr_list:
             return []
 
-        for exp in USUALLY_MISUSED_EXPRESSIONS:
-            if len(exp) > len(words) + 1 or not fnmatch(word, exp[0]):
+        for exp in expr_list:
+            if not fnmatch(word, exp[0]) or len(exp) > len(words) + 1:
                 continue
 
             # match, check the previous words in the expression
@@ -317,7 +391,7 @@ class MisusedExpressionFind(BaseFind):
                 prevcount += 1
             else:
                 # matched
-                return [MisusedExpressionFind(word, words, exp)]
+                return [ClicheFind(word, words, exp)]
 
         return []
 
@@ -327,8 +401,4 @@ class MisusedExpressionFind(BaseFind):
 
     @property
     def custom_message(self) -> str:
-        return 'Expression generalmente mal usada: %s' % ' '.join(reversed(self.expression))
-
-
-all_checks = [OverUsedFind, MenteFind, RepetitionFind, ContainedFind, SayWordsFind,
-              MisusedVerbFind, MisusedExpressionFind]
+        return 'Expresión cliché: %s' % ' '.join(reversed(self.expression))
