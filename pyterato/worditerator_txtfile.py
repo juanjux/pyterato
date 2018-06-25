@@ -26,3 +26,6 @@ class TxtFileWordIterator(BaseWordIterator):
         self._prev_words.append(ret)
         del self.words[0]
         return ret, None
+
+    def __len__(self):
+        return len(self.words)
