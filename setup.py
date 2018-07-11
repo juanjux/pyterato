@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from pyd.support import setup, Extension
 from setuptools import setup, find_packages
 from codecs import open
 from os import path
@@ -40,5 +41,11 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6"
-    ]
+    ],
+    ext_modules=[
+        Extension('pyterato_native', ['native/pyterato_native.d'],
+            extra_compile_args=['-w'],
+            build_deimos=True,
+            d_lump=True),
+    ],
 )
