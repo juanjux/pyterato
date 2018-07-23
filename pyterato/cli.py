@@ -6,7 +6,7 @@ import sys
 from collections import OrderedDict
 from typing import Iterable, List
 
-import pyterato.checks as checks
+import pyterato_native as native
 
 # TODO:
 # - Show the results in LibreOffice
@@ -22,6 +22,7 @@ import pyterato.checks as checks
 # - Way to disable or enable checks individually using command line parameters or a
 #   config file.
 
+SEPARATOR = '-' * 20
 
 def print_results(findings) -> None:
     total = 0
@@ -31,11 +32,16 @@ def print_results(findings) -> None:
 
         flist = findings[page]
         for typefindings in flist:
-            for f in typefindings:
+            if type(typefindings) == str:
                 total += 1
-                print(f)
+                print(typefindings)
+                pass
+            else:
+                for f in typefindings:
+                    total += 1
+                    print(f)
 
-    print(checks.SEPARATOR + os.linesep)
+    print(SEPARATOR + os.linesep)
     print('Total: %d avisos emitidos' % total)
 
 
@@ -117,29 +123,19 @@ def main() -> int:
 
     findings: OrderedDict[int, List[object]] = OrderedDict()
 
+    checker = native.Checker()
+
     for word, page in words:  # type: ignore
-        if not word or word in checks.COMMON_WORDS:
+        if not word:
             continue
 
+        # XXX mover debajo
         if page not in findings:
             findings[page] = []
 
-        # call check on all classes in the check module inheriting from BaseFind
-        for symname in checks.__dict__.keys():
-            sym = getattr(checks, symname)
-
-            if hasattr(sym, '__bases__') and checks.BaseFind in sym.__bases__:
-                code = sym.code()
-
-                if options.enable and code not in enable_list:
-                    continue
-
-                if options.disable and code in disable_list:
-                    continue
-
-                res = sym.check(word, words.prev_words)
-                if len(res):
-                    findings[page].append(res)
+        res_native = checker.run_checks(word)
+        for rn in res_native:
+            findings[page].append(rn)
 
     print_results(findings)
     return 0

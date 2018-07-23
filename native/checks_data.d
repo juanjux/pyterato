@@ -1,11 +1,68 @@
-from typing import List, Dict, Optional, Tuple
+module checks_data;
 
-__all__ = ['get_fistword_exprs']
+// XXX use fnmatch
+enum COMMON_WORDS = [
+        "el":true, "él":true, "lo":true, "la":true, "le":true, "los":true, "las":true,
+        "que":true, "qué":true, "cual":true, "cuál":true, "cuales":true, "como":true,
+        "cómo":true, "este":true, "éste":true, "esta":true, "esto":true, "ésta":true,
+        "ese":true, "esa":true, "eso":true, "esos":true, "aquel":true, "aquello":true,
+        "aquella":true, "y":true, "o":true, "ha":true, "han":true, "con":true, "sin":true,
+        "desde":true, "ya":true, "aquellos":true, "aquellas":true, "se":true, "de":true,
+        "un":true, "uno":true, "unos":true, "una":true, "unas":true, "con":true,
+        "ante":true, "ya":true, "para":true, "sin":true, "mas":true, "más":true, "habeis":true,
+        "serían":true, "sería":true, "en":true, "por":true, "mi":true, "mis":true,
+        "si":true, "sí":true, "no":true, "hasta":true, "su":true, "mi":true, "sus":true,
+        "tus":true, "sobre":true, "del":true, "a":true, "e":true, "pero":true, "había":true,
+        "habías":true, "habían":true, "habría":true, "habrías":true, "habrían":true,
+        "ser":true, "al":true, "sido":true, "haya":true, "otra":true, "me":true, "te":true,
+        "dijo":true, "dije":true, "preguntó":true, "pregunté":true, "ni":true, "les":true,
+        "hecho":true, "donde":true, "da":true, "dan":true, "das":true, "cuando":true,
+        "donde":true, "os":true, "vuestros":true, "vuestras":true,
+        "vosotros":true, "vosotras":true, "algo":true, "muy":true, "mas":true,
+        "menos":true, "entre":true, "tras":true, "aún":true, "hacia":true, "sea":true,
+        "sean":true, "soy":true, "eres":true, "es":true, "somos":true, "sois":true, "son":true, "era":true, "eras":true,
+        "érais":true, "eran":true, "seré":true, "serás":true, "será":true, "seréis":true,
+        "serán":true, "sido":true, "sería":true, "serías":true, "seríamos":true,
+        "seríais":true, "serían":true, "fui":true, "fuiste":true, "fue":true,
+        "fuimos":true, "fueron":true, "sé":true, "sed":true, "sean":true, "fuera":true,
+        "estaba":true, "estaban":true, "fueras":true, "fuera":true, "fuese":true,
+        "fueses":true, "fuesen":true, "siendo":true,
+];
 
-_CLICHE_EXPR_DICT_KEYLEN = 6
+// XXX use fnmatch
+enum USUALLY_PEDANTIC_SAYWORDS = [
+        "rebuznó":true, "rugió":true, "rugí":true, "bramó":true, "bramé":true,
+        "declaró":true, "declaré":true, "inquirió":true, "inquirí":true, "sostuvo":true,
+        "sostuve":true, "refirió":true, "referí":true, "aseveró":true, "aseveré":true,
+        "arguyó":true, "argüí":true,
+];
 
-# Source: http://diccionariodelcliche.umh.es/
-_CLICHE_EXPR: Tuple[List[str], ...] = (
+// XXX use fnmatch
+enum USUALLY_MISUSED_SAYWORDS = [
+    "comentó":true, "comenté":true, "interrogó":true, "interrogué":true, "amenazó":true,
+    "amenacé":true, "conminó":true, "conminé":true, "exhortó":true, "exhorté":true,
+    "aludió":true, "aludí":true,
+];
+
+enum OVERUSED_WORDS = [
+    "sonido*", "ruido*", "cosa*", "usó", "usab*", "usáb", "usas*",
+    "provoc*", "usar", "usamos", "usar*", "usad*", "emplea*",
+];
+
+// First element is the root and others are non verbal words (thus allowed)
+// FIXME: check the sufix for verbal conjugations
+enum USUALLY_MISUSED_VERB_ROOTS = [
+        ["espet*", "espeto", "espetos"],
+        ["mascull*",],
+        ["perl*", "perla", "perlas"],
+        ["empalid*",],
+        ["tinti*",],
+        ["manten*", "mantenido", "mantenida", "mantenidos", "mantenidas"],
+        ["mantuv*",],
+        ["tamboril*", "tamborilero", "tamborilera", "tamborileros", "tamborileras"],
+];
+
+string[][] CLICHE_EXPRESSIONS = [
     ["a", "base", "de", "bien"],
     ["a", "bocajarro"],
     ["a", "brazo", "partido"],
@@ -3778,21 +3835,75 @@ _CLICHE_EXPR: Tuple[List[str], ...] = (
     ["ídolo", "de", "masas"],
     ["última", "corre", "de", "mi", "cuenta"],
     ["último", "cartucho"],
-)
+];
 
-for e in _CLICHE_EXPR:
-    e.reverse()
+string[][] CALCO_EXPR = [
+        ["h*", "lo", "correcto"],  // hacer lo debido, hacer el bien, etc
+        ["al", "final", "del", "dia"],
+        ["jug*", "*", "culo*"],  // jugarse la piel
+        ["quit*", "el", "culo"],  // largate
+        ["esta", "todo", "bien"],  // todo va bien
+        ["esta", "todo", "correcto"],  // ditto
+        ["todo", "lo", "que", "ten*", "que"],  // lo unico, solo, etc
+        ["tan", "simple", "como"],  // es sencillo, en pocas palabras, en resumen...
+        ["es", "donde", "pertenez*"],  // es mi casa, es mi pais, etc
+        ["dame", "un", "respiro"],  // no me agobies, no me atosigues, dejame en paz
+        ["condescend*"],  // desprecio (excepto cuando es "dejar hacer")
+        ["suma", "decente"],  // cantidad considerable
+        ["cantidad", "decente"],  // ditto
+        ["devocion"],  // lealtad, afecto (solo correcto en contexto religioso)
+        ["eventualmente"],  // al final, finalmente, a la larga
+        ["excit*"],  // emocionado, entusiasmado, ilusionado (correcto en contexto sexual o quimico)
+        ["un", "fraude"],  // farsante, impostor, tramposo
+        ["interpone*", "en", "*", "camino"],  // ponerse en medio, estorbar
+        ["h*", "el", "macho"],  // hacerse el duro
+        ["orgullosa", "historia"],  // gloriosa historia (proud inanimado)
+        ["rango"],  // graduacion (excepto en matematicas y otras ciencias)
+        ["entrega", "especial"],  // entrega urgente
+        ["maldicion"],  // muchas opciones...
+        ["jodidamente"],  // ditto
+        ["lo", "hici*s"],  // lo conseguimos (correcto en el contexto de fabricar o crear, no en el de conseguir hacer algo)
+];
 
-_CLICHE_EXPR_DICT: Dict[str, Tuple[List[str], ...]] = {}
+string[][] USUALLY_MISUSED_EXPR = [
+        ["sacud*", "la", "cabeza"],
+        ["perlab*", "*", "frente"],
+        ["provoc*", "*", "polémica"],
+        // usually obvious from the context/anglicism:
+        ["qued*", "de", "pie"], ["qued*", "sentad*"],
+        ["esta*", "de", "pie"], ["esta*", "sentad*"],
+        ["encontr*", "de", "pie"], ["encontr*", "sentad*"],
+];
 
-for expr in _CLICHE_EXPR:
-    key_letters = expr[0][:_CLICHE_EXPR_DICT_KEYLEN]
+string[][][string] _CLICHE_EXPR_DICT;
+enum _CLICHE_EXPR_DICT_KEYLEN = 6;
 
-    if key_letters not in _CLICHE_EXPR_DICT:
-        _CLICHE_EXPR_DICT[key_letters] = [expr]
-    else:
-        _CLICHE_EXPR_DICT[key_letters].append(expr)
+static this()
+{
+    import std.algorithm.mutation: reverse;
+    import std.algorithm: min;
 
+    // Reverse the cliche expressions (they're more readable like they're written)
+    // and create a dict grouping expressions by the first 6 letters of the first
+    // word
+    foreach(expr; CLICHE_EXPRESSIONS) {
+        expr.reverse();
 
-def get_fistword_exprs(word) -> Optional[List[List[str]]]:
-    return _CLICHE_EXPR_DICT.get(word[:_CLICHE_EXPR_DICT_KEYLEN])
+        auto keylen = min(expr[0].length, _CLICHE_EXPR_DICT_KEYLEN);
+        auto key_letters = expr[0][0..keylen];
+
+        if (key_letters !in _CLICHE_EXPR_DICT) {
+            _CLICHE_EXPR_DICT[key_letters] = [expr];
+        } else {
+            _CLICHE_EXPR_DICT[key_letters] ~= expr;
+        }
+    }
+
+    foreach(expr; CALCO_EXPR) {
+        expr.reverse();
+    }
+
+    foreach(expr; USUALLY_MISUSED_EXPR) {
+        expr.reverse();
+    }
+}
