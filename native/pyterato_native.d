@@ -1,16 +1,6 @@
 module pyterato_native;
 
-// XXX cleanup imports
 import checks;
-
-import std.algorithm.mutation;
-import std.algorithm.searching: startsWith, endsWith, canFind;
-import std.algorithm: min;
-import std.array: join;
-import std.format;
-import std.path: globMatch;
-import std.range;
-import std.stdio;
 
 import pyd.pyd;
 
@@ -112,7 +102,6 @@ class Checker
 extern(C) void PydMain() {
     module_init();
 
-    // NativeBaseFind, XXX probably not needed to wrap
     wrap_class!(
         Checker,
         Def!(Checker.run_checks, string[] function(string)),

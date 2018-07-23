@@ -129,11 +129,10 @@ def main() -> int:
         if not word:
             continue
 
-        # XXX mover debajo
-        if page not in findings:
-            findings[page] = []
-
         res_native = checker.run_checks(word)
+        if len(res_native) and page not in findings:
+                findings[page] = []
+
         for rn in res_native:
             findings[page].append(rn)
 
