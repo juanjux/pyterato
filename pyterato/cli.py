@@ -48,6 +48,8 @@ def print_results(findings) -> None:
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group()
+
+    # FIXME: option to list checks
     group.add_argument(
             '-t', '--txt',
             action="store_true",
@@ -117,8 +119,6 @@ def main() -> int:
 
     disable_list = set([i.strip() for i in options.disable.split(',')]) if options.disable else set()
     enable_list = set([i.strip() for i in options.enable.split(',')]) if options.enable else set()
-    options.disable = bool(options.disable)
-    options.enable = bool(options.enable)
 
     if options.libreoffice:
         from pyterato.worditerator_lo import LibreOfficeWordIterator
@@ -130,6 +130,12 @@ def main() -> int:
     findings: OrderedDict[int, List[object]] = OrderedDict()
 
     checker = native.Checker()
+
+    for dis in disable_list:
+        checker.disable_check(dis)
+
+    for en in enable_list:
+        checker.enable_check(en)
 
     for word, page in words:  # type: ignore
         if not word:

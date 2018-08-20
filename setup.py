@@ -45,7 +45,7 @@ setup(
     ext_modules=[
         Extension('pyterato_native', ['native/checks.d', 'native/pyterato_native.d', 'native/checks_data.d'],
             # extra_compile_args=['-w', '-g', '-debug', '-profile'],
-            extra_compile_args=['-profile'], # XXX
+            # extra_compile_args=['-profile'],
             optimize=True,
             build_deimos=True,
             d_lump=True),

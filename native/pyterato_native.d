@@ -11,6 +11,7 @@ class NativeCheckException : Exception
     }
 }
 
+// FIXME: should be a Singleton
 class Checker
 {
     private string currentWord;
@@ -19,7 +20,7 @@ class Checker
     private bool[string] enabled;
     private string _SEPARATOR = "------------------------------";
     private uint _CONTEXT_SIZE = 6;
-    private string[] function(string, string[])[string] checkers;
+    private Finding[] function(string, string[])[] checkers;
 
     this(uint numwords = 2048)
     {
@@ -28,22 +29,43 @@ class Checker
         words.reserve(numwords);
 
         checkers = [
-            "pedanticsayword": &pedanticSayword,
-            "misusedsayword": &misusedSayword,
-            "overused": &overusedWord,
-            "mente": &menteFind,
-            "contained": &containedFind,
-            "repetition": &repetitionFind,
-            "cliche": &clicheFind,
-            "misusedverb": &misusedVerbFind,
-            "misusedexpression": &misusedExpressionFind,
-            "calco": &calcoFind,
+            &pedanticSayword,
+            &misusedSayword,
+            &overusedWord,
+            &wordCompareMultiCheck,
+            &clicheFind,
+            &misusedVerbFind,
+            &misusedExpressionFind,
+            &calcoFind,
         ];
     }
 
-    public string[] availableChecks()
+    // FIXME: use compile time programming to inspect the checks.d module
+    // and generate this list
+    public string[] available_checks()
     {
-        return checkers.keys;
+        return [
+            "pedanticsayword",
+            "misusedsayword",
+            "overused",
+            "mente",
+            "contained",
+            "repetition",
+            "cliche",
+            "misusedverb",
+            "misusedexpression",
+            "calco",
+        ];
+    }
+
+    public void enable_check(string code)
+    {
+        checkSettings.enable_check(code);
+    }
+
+    public void disable_check(string code)
+    {
+        checkSettings.disable_check(code);
     }
 
     private string findMessage(string code, string custom_message)
@@ -54,25 +76,6 @@ class Checker
             "Contexto: ..." ~ _context ~ "...";
     }
 
-    public void enable_check(string code)
-    {
-        if (code !in enabled)
-            enabled[code] = true;
-
-        if (code in disabled)
-            disabled.remove(code);
-    }
-
-    public void disable_check(string code)
-    {
-        if (code !in disabled)
-            disabled[code] = true;
-
-        if (code in enabled)
-            enabled.remove(code);
-    }
-
-
     public string[] run_checks(string newWord)
     {
         words ~= newWord;
@@ -82,14 +85,9 @@ class Checker
 
         string[] res;
 
-        foreach(checkCode; checkers.byKey) {
-            if ((enabled.length > 0 && checkCode !in enabled) ||
-                (disabled.length > 0 && checkCode in disabled)) {
-                continue;
-            }
-
-            foreach(msg; checkers[checkCode](newWord, words[0..$-1])) {
-                res ~= findMessage(checkCode, msg);
+        foreach(checker; checkers) {
+            foreach(finding; checker(newWord, words[0..$-1])) {
+                res ~= findMessage(finding.code, finding.msg);
             }
         }
 
@@ -104,7 +102,7 @@ extern(C) void PydMain() {
     wrap_class!(
         Checker,
         Def!(Checker.run_checks, string[] function(string)),
-        Def!(Checker.availableChecks, string[] function()),
+        Def!(Checker.available_checks, string[] function()),
         Def!(Checker.enable_check, void function(string)),
         Def!(Checker.disable_check, void function(string)),
         Init!(uint),
