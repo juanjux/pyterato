@@ -105,8 +105,14 @@ def parse_arguments() -> argparse.Namespace:
 
     return parser.parse_args()
 
+PROFILE = False
 
 def main() -> int:
+    if PROFILE:
+        import cProfile
+        pr = cProfile.Profile()
+        pr.enable()
+
     options = parse_arguments()
 
     disable_list = set([i.strip() for i in options.disable.split(',')]) if options.disable else set()
@@ -137,6 +143,11 @@ def main() -> int:
             findings[page].append(rn)
 
     print_results(findings)
+
+    if PROFILE:
+        pr.disable()
+        pr.print_stats(sort='time')
+
     return 0
 
 

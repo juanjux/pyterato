@@ -22,7 +22,7 @@ bool is_common(in string word)
     return check_set(word, COMMON_WORDS);
 }
 
-string[] checkExprList(in string word, in string[] words, in string[][] exprList,
+string[] _checkExprList(in string word, in string[] words, in string[][] exprList,
                        in string msgFormatStr)
 {
     foreach (expr; exprList) {
@@ -149,7 +149,7 @@ string[] clicheFind(in string word, in string[] words)
     if (expr_list is null)
         return [];
 
-    return checkExprList(word, words, *expr_list, "Expesión cliché: %s");
+    return _checkExprList(word, words, *expr_list, "Expesión cliché: %s");
 }
 
 string[] misusedVerbFind(in string word, in string[] words)
@@ -171,13 +171,13 @@ string[] misusedVerbFind(in string word, in string[] words)
 
 string[] misusedExpressionFind(in string word, in string[] words)
 {
-    return checkExprList(word, words, USUALLY_MISUSED_EXPR,
+    return _checkExprList(word, words, USUALLY_MISUSED_EXPR,
                          "Expresión generalmente mal usada: %s");
 }
 
 string[] calcoFind(in string word, in string[] words)
 {
-    return checkExprList(word, words, CALCO_EXPR,
+    return _checkExprList(word, words, CALCO_EXPR,
                          "Calco / extranjerismo: %s");
 }
 

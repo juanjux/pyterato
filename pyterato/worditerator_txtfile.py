@@ -9,6 +9,8 @@ class TxtFileWordIterator(BaseWordIterator):
     def __init__(self, fname: str) -> None:
         super().__init__()
 
+        self.words_idx = 0
+
         if not fname:
             print('Leyendo de entrada estándar...')
             self.text = sys.stdin.read()
@@ -19,12 +21,14 @@ class TxtFileWordIterator(BaseWordIterator):
         self.words = self.text.split()
 
     def __next__(self) -> Tuple[str, Optional[int]]:
-        if not self.words:
+        try:
+            ret = self.words[self.words_idx]
+        except IndexError:
             raise StopIteration
 
-        ret = ''.join(list(filter(lambda x: x.isalnum(), self.words[0])))
+        ret = ''.join(list(filter(lambda x: x.isalnum(), ret)))
         self._prev_words.append(ret)
-        del self.words[0]
+        self.words_idx += 1
         return ret, None
 
     def __len__(self):

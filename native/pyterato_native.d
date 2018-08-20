@@ -32,10 +32,10 @@ class Checker
             "misusedsayword": &misusedSayword,
             "overused": &overusedWord,
             "mente": &menteFind,
+            "contained": &containedFind,
             "repetition": &repetitionFind,
             "cliche": &clicheFind,
             "misusedverb": &misusedVerbFind,
-            "contained": &containedFind,
             "misusedexpression": &misusedExpressionFind,
             "calco": &calcoFind,
         ];
