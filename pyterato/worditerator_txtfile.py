@@ -27,9 +27,5 @@ class TxtFileWordIterator(BaseWordIterator):
             raise StopIteration
 
         ret = ''.join(list(filter(lambda x: x.isalnum(), ret)))
-        self._prev_words.append(ret)
         self.words_idx += 1
         return ret, None
-
-    def __len__(self):
-        return len(self.words)

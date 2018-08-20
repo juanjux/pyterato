@@ -41,11 +41,6 @@ class LibreOfficeWordIterator(BaseWordIterator):
 
         word = ''.join(e for e in self.cursor.String.lower() if e.isalnum())
 
-        self._prev_words.append(word)
         if not self.cursor.gotoNextWord(False):
             raise StopIteration
         return word, page
-
-    @property
-    def prev_words(self) -> List[str]:
-        return self._prev_words

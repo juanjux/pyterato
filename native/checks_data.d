@@ -1,49 +1,12 @@
 module checks_data;
 
-// XXX use fnmatch
-enum COMMON_WORDS = [
-        "el":true, "él":true, "lo":true, "la":true, "le":true, "los":true, "las":true,
-        "que":true, "qué":true, "cual":true, "cuál":true, "cuales":true, "como":true,
-        "cómo":true, "este":true, "éste":true, "esta":true, "esto":true, "ésta":true,
-        "ese":true, "esa":true, "eso":true, "esos":true, "aquel":true, "aquello":true,
-        "aquella":true, "y":true, "o":true, "ha":true, "han":true, "con":true, "sin":true,
-        "desde":true, "ya":true, "aquellos":true, "aquellas":true, "se":true, "de":true,
-        "un":true, "uno":true, "unos":true, "una":true, "unas":true, "con":true,
-        "ante":true, "ya":true, "para":true, "sin":true, "mas":true, "más":true, "habeis":true,
-        "serían":true, "sería":true, "en":true, "por":true, "mi":true, "mis":true,
-        "si":true, "sí":true, "no":true, "hasta":true, "su":true, "mi":true, "sus":true,
-        "tus":true, "sobre":true, "del":true, "a":true, "e":true, "pero":true, "había":true,
-        "habías":true, "habían":true, "habría":true, "habrías":true, "habrían":true,
-        "ser":true, "al":true, "sido":true, "haya":true, "otra":true, "me":true, "te":true,
-        "dijo":true, "dije":true, "preguntó":true, "pregunté":true, "ni":true, "les":true,
-        "hecho":true, "donde":true, "da":true, "dan":true, "das":true, "cuando":true,
-        "donde":true, "os":true, "vuestros":true, "vuestras":true,
-        "vosotros":true, "vosotras":true, "algo":true, "muy":true, "mas":true,
-        "menos":true, "entre":true, "tras":true, "aún":true, "hacia":true, "sea":true,
-        "sean":true, "soy":true, "eres":true, "es":true, "somos":true, "sois":true, "son":true, "era":true, "eras":true,
-        "érais":true, "eran":true, "seré":true, "serás":true, "será":true, "seréis":true,
-        "serán":true, "sido":true, "sería":true, "serías":true, "seríamos":true,
-        "seríais":true, "serían":true, "fui":true, "fuiste":true, "fue":true,
-        "fuimos":true, "fueron":true, "sé":true, "sed":true, "sean":true, "fuera":true,
-        "estaba":true, "estaban":true, "fueras":true, "fuera":true, "fuese":true,
-        "fueses":true, "fuesen":true, "siendo":true,
-];
+import std.container.rbtree;
 
-// XXX use fnmatch
-enum USUALLY_PEDANTIC_SAYWORDS = [
-        "rebuznó":true, "rugió":true, "rugí":true, "bramó":true, "bramé":true,
-        "declaró":true, "declaré":true, "inquirió":true, "inquirí":true, "sostuvo":true,
-        "sostuve":true, "refirió":true, "referí":true, "aseveró":true, "aseveré":true,
-        "arguyó":true, "argüí":true,
-];
+// FIXME: use fnmatch for these
+// Initialized on static this()
+RedBlackTree!string COMMON_WORDS, USUALLY_PEDANTIC_SAYWORDS, USUALLY_MISUSED_SAYWORDS;
 
-// XXX use fnmatch
-enum USUALLY_MISUSED_SAYWORDS = [
-    "comentó":true, "comenté":true, "interrogó":true, "interrogué":true, "amenazó":true,
-    "amenacé":true, "conminó":true, "conminé":true, "exhortó":true, "exhorté":true,
-    "aludió":true, "aludí":true,
-];
-
+// FIXME: change this so a rbtree can be used while keeping the globbing
 enum OVERUSED_WORDS = [
     "sonido*", "ruido*", "cosa*", "usó", "usab*", "usáb", "usas*",
     "provoc*", "usar", "usamos", "usar*", "usad*", "emplea*",
@@ -3882,6 +3845,47 @@ static this()
 {
     import std.algorithm.mutation: reverse;
     import std.algorithm: min;
+
+    COMMON_WORDS = redBlackTree(
+            "el", "él", "lo", "la", "le", "los", "las",
+            "que", "qué", "cual", "cuál", "cuales", "como",
+            "cómo", "este", "éste", "esta", "esto", "ésta",
+            "ese", "esa", "eso", "esos", "aquel", "aquello",
+            "aquella", "y", "o", "ha", "han", "con", "sin",
+            "desde", "ya", "aquellos", "aquellas", "se", "de",
+            "un", "uno", "unos", "una", "unas", "con",
+            "ante", "ya", "para", "sin", "mas", "más", "habeis",
+            "serían", "sería", "en", "por", "mi", "mis",
+            "si", "sí", "no", "hasta", "su", "mi", "sus",
+            "tus", "sobre", "del", "a", "e", "pero", "había",
+            "habías", "habían", "habría", "habrías", "habrían",
+            "ser", "al", "sido", "haya", "otra", "me", "te",
+            "dijo", "dije", "preguntó", "pregunté", "ni", "les",
+            "hecho", "donde", "da", "dan", "das", "cuando",
+            "donde", "os", "vuestros", "vuestras",
+            "vosotros", "vosotras", "algo", "muy", "mas",
+            "menos", "entre", "tras", "aún", "hacia", "sea",
+            "sean", "soy", "eres", "es", "somos", "sois", "son", "era", "eras",
+            "érais", "eran", "seré", "serás", "será", "seréis",
+            "serán", "sido", "sería", "serías", "seríamos",
+            "seríais", "serían", "fui", "fuiste", "fue",
+            "fuimos", "fueron", "sé", "sed", "sean", "fuera",
+            "estaba", "estaban", "fueras", "fuera", "fuese",
+            "fueses", "fuesen", "siendo",
+            );
+
+    USUALLY_PEDANTIC_SAYWORDS = redBlackTree(
+        "rebuznó", "rugió", "rugí", "bramó", "bramé",
+        "declaró", "declaré", "inquirió", "inquirí", "sostuvo",
+        "sostuve", "refirió", "referí", "aseveró", "aseveré",
+        "arguyó", "argüí",
+    );
+
+    USUALLY_MISUSED_SAYWORDS = redBlackTree(
+        "comentó", "comenté", "interrogó", "interrogué", "amenazó",
+        "amenacé", "conminó", "conminé", "exhortó", "exhorté",
+        "aludió", "aludí",
+    );
 
     // Reverse the cliche expressions (they're more readable like they're written)
     // and create a dict grouping expressions by the first 6 letters of the first

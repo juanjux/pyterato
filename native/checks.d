@@ -6,20 +6,22 @@ import std.algorithm.mutation;
 import std.algorithm.searching: startsWith, endsWith, canFind;
 import std.algorithm: min;
 import std.array: join;
+import std.container.rbtree;
 import std.format;
 import std.path: globMatch;
 import std.range;
 import std.stdio;
 
-bool check_set(in string word, in bool[string] set)
-{
-    auto found = word in set;
-    return found != null;
-}
+//struct Finding
+//{
+    //string code;
+    //string msg;
+//}
 
+pragma(inline, true)
 bool is_common(in string word)
 {
-    return check_set(word, COMMON_WORDS);
+    return word in COMMON_WORDS;
 }
 
 string[] _checkExprList(in string word, in string[] words, in string[][] exprList,
@@ -53,18 +55,16 @@ string[] _checkExprList(in string word, in string[] words, in string[][] exprLis
 
 string[] pedanticSayword(in string word, in string[] words)
 {
-    if (check_set(word, USUALLY_PEDANTIC_SAYWORDS)) {
+    if (word in USUALLY_PEDANTIC_SAYWORDS)
         return ["Verbo generalmente pedante en diálogos: " ~ word];
-    }
 
     return [];
 }
 
 string[] misusedSayword(in string word, in string[] words)
 {
-    if (check_set(word, USUALLY_MISUSED_SAYWORDS)) {
+    if (word in USUALLY_MISUSED_SAYWORDS)
         return ["Verbo generalmente mal usado en diálogos: " ~ word];
-    }
 
     return [];
 }
@@ -74,26 +74,25 @@ string[] overusedWord(in string word, in string[] words)
     string[] res;
 
     foreach(ow; OVERUSED_WORDS) {
-        if (globMatch(word, ow)) {
+        if (globMatch(word, ow))
             res ~= "Palabra/verbo comodín: " ~ word;
-        }
     }
 
     return res;
 }
 
+// FIXME: merge mente, contained and repetition
 enum MENTE_OLDWORDS = 100;
 string[] menteFind(in string word, in string[] words)
 {
-
     string[] res;
     auto numprev = min(MENTE_OLDWORDS, words.length);
 
     if (word != "mente" && endsWith(word, "mente")) {
-        foreach(idx, oldword; words[$-numprev..$].enumerate(0)) {
+        foreach_reverse(idx, oldword; words[$-numprev..$].enumerate(0)) {
             if (oldword != "mente" && endsWith(oldword, "mente")) {
                 res ~= format("Repetición de palabra con sufijo mente ('%s') %d palabras atrás: %s",
-                              word, idx, oldword);
+                        word, numprev-idx, oldword);
             }
         }
     }
@@ -115,7 +114,7 @@ string[] containedFind(in string word, in string[] words)
         if (oldword.length == 0 || is_common(oldword) || oldword.length < CONTAINED_MIN_SIZE)
             continue;
 
-        if (!oldword.endsWith("mente") && oldword != word) {
+        if (oldword != word && !oldword.endsWith("mente")) {
             if (canFind(word, oldword) || canFind(oldword, word)) {
                 res ~= format("Repetición de palabra contenida '%s' %d palabras atrás: %s",
                               word, numprev-idx, oldword);
@@ -133,9 +132,10 @@ string[] repetitionFind(in string word, in string[] words)
     string[] res;
     auto numprev = min(REPETITION_OLDWORDS, words.length);
 
-    foreach(idx, oldword; words[$-numprev..$].enumerate(0)) {
+    foreach_reverse(idx, oldword; words[$-numprev..$].enumerate(0)) {
         if (oldword == word) {
-            res ~= format("Repetición de palabra '%s' %d palabras atrás", word, idx);
+            res ~= format("Repetición de palabra '%s' %d palabras atrás", word,
+                    numprev-idx);
         }
     }
 
@@ -169,6 +169,8 @@ string[] misusedVerbFind(in string word, in string[] words)
     return [];
 }
 
+
+// FIXME: merge?
 string[] misusedExpressionFind(in string word, in string[] words)
 {
     return _checkExprList(word, words, USUALLY_MISUSED_EXPR,

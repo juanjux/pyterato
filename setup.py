@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from setuptools import find_packages
 from pyd.support import setup, Extension
-from setuptools import setup, find_packages
 from codecs import open
 from os import path
 
@@ -44,10 +44,10 @@ setup(
     ],
     ext_modules=[
         Extension('pyterato_native', ['native/checks.d', 'native/pyterato_native.d', 'native/checks_data.d'],
-            extra_compile_args=['-release', '-boundscheck=off', '-inline'],
-            # extra_compile_args=['-w', '-g', '-debug'],
-            build_deimos=True,
+            # extra_compile_args=['-w', '-g', '-debug', '-profile'],
+            extra_compile_args=['-profile'], # XXX
             optimize=True,
+            build_deimos=True,
             d_lump=True),
     ],
 )

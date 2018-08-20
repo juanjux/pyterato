@@ -7,6 +7,16 @@ literarios en Español.
 
 ## Instalación
 
+### Compilador de D
+
+XXX complete
+
+```
+# git clone
+python setup.py build_ext -i --compiler=ldc2
+python setup.py install
+```
+
 ```
 pip3 install pyterato
 ```

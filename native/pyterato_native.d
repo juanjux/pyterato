@@ -88,8 +88,7 @@ class Checker
                 continue;
             }
 
-            auto msgs = checkers[checkCode](newWord, words[0..$-1]);
-            foreach(msg; msgs) {
+            foreach(msg; checkers[checkCode](newWord, words[0..$-1])) {
                 res ~= findMessage(checkCode, msg);
             }
         }
