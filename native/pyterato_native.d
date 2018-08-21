@@ -4,6 +4,9 @@ import checks;
 
 import pyd.pyd;
 
+import std.algorithm: min;
+import std.array: join;
+
 class NativeCheckException : Exception
 {
     this(string msg, string file = __FILE__, size_t line = __LINE__) {
@@ -29,10 +32,8 @@ class Checker
         words.reserve(numwords);
 
         checkers = [
-            &pedanticSayword,
-            &misusedSayword,
-            &overusedWord,
-            &wordCompareMultiCheck,
+            &nonContextWordCheck,
+            &proximityChecks,
             &clicheFind,
             &misusedVerbFind,
             &misusedExpressionFind,
@@ -44,18 +45,7 @@ class Checker
     // and generate this list
     public string[] available_checks()
     {
-        return [
-            "pedanticsayword",
-            "misusedsayword",
-            "overused",
-            "mente",
-            "contained",
-            "repetition",
-            "cliche",
-            "misusedverb",
-            "misusedexpression",
-            "calco",
-        ];
+        return check2str.values();
     }
 
     public void enable_check(string code)

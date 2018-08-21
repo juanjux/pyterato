@@ -17,18 +17,46 @@ import std.stdio;
 // - check method.
 // - mustRun method.
 
+enum Check
+{
+    MENTE,
+    CONTAINED,
+    REPETITION,
+    CLICHE,
+    OVERUSED,
+    PEDANTICSAYWORD,
+    MISUSEDSAYWORD,
+    MISUSEDVERB,
+    MISUSEDEXPR,
+    CALCO
+}
+
+// FIXME: generate at compile time so it's always updated
+enum string[Check] check2str = [
+    Check.MENTE: "mente",
+    Check.CONTAINED: "contained",
+    Check.REPETITION: "repetition",
+    Check.CLICHE: "cliche",
+    Check.OVERUSED: "overused",
+    Check.PEDANTICSAYWORD: "pedanticsayword",
+    Check.MISUSEDSAYWORD: "misusedsayword",
+    Check.MISUSEDVERB: "misusedverb",
+    Check.MISUSEDEXPR: "misusedexpression",
+    Check.CALCO: "calco",
+];
+
 struct CheckSettings
 {
-    bool[string] enabled;
-    bool[string] disabled;
+    bool[Check] enabled;
+    bool[Check] disabled;
 
-    bool avoidCheck(string code)
+    bool avoidCheck(Check code)
     {
         return ((enabled.length > 0 && code !in enabled) ||
                 (disabled.length > 0 && code in disabled)) ;
     }
 
-    bool avoidChecks(string[] codes)
+    bool avoidChecks(Check[] codes)
     {
         foreach (code; codes) {
             if (!avoidCheck(code))
@@ -38,22 +66,36 @@ struct CheckSettings
         return true;
     }
 
+    private Check getCheckCode(string code)
+    {
+        foreach(i; check2str.byKeyValue) {
+            if (i.value == code)
+                return i.key;
+        }
+
+        throw new Exception("No check found named '" ~ code ~ "'");
+    }
+
     public void enable_check(string code)
     {
-        if (code !in enabled)
-            enabled[code] = true;
+        auto enumCode = getCheckCode(code);
 
-        if (code in disabled)
-            disabled.remove(code);
+        if (enumCode !in enabled)
+            enabled[enumCode] = true;
+
+        if (enumCode in disabled)
+            disabled.remove(enumCode);
     }
 
     public void disable_check(string code)
     {
-        if (code !in disabled)
-            disabled[code] = true;
+        auto enumCode = getCheckCode(code);
 
-        if (code in enabled)
-            enabled.remove(code);
+        if (enumCode !in disabled)
+            disabled[enumCode] = true;
+
+        if (enumCode in enabled)
+            enabled.remove(enumCode);
     }
 }
 
@@ -72,7 +114,7 @@ bool is_common(in string word)
 }
 
 // FIXME: optimize this merging all the expression checking in a single pass
-Finding[] _checkExprList(string code, in string word, in string[] words,
+Finding[] _checkExprList(Check code, in string word, in string[] words,
                         in string[][] exprList, in string msgFormatStr)
 {
     foreach (expr; exprList) {
@@ -94,63 +136,42 @@ Finding[] _checkExprList(string code, in string word, in string[] words,
 
         if (fullMatch) {
             auto reversed = expr.dup;
-            return [Finding(code, format(msgFormatStr, join(reversed.reverse(), " ")))];
+            return [Finding(check2str[code], format(msgFormatStr, join(reversed.reverse(), " ")))];
         }
     }
 
     return [];
 }
 
-Finding[] pedanticSayword(in string word, in string[] words)
+Finding[] nonContextWordCheck(in string word, in string[] words)
 {
-    auto CODE = "pedanticsayword";
-    if (checkSettings.avoidCheck(CODE))
-        return [];
-
-    if (word in USUALLY_PEDANTIC_SAYWORDS)
-        return [Finding(CODE, "Verbo generalmente pedante en diálogos: " ~ word)];
-
-    return [];
-}
-
-Finding[] misusedSayword(in string word, in string[] words)
-{
-    auto CODE = "misusedsayword";
-    if (checkSettings.avoidCheck(CODE))
-        return [];
-
-    if (word in USUALLY_MISUSED_SAYWORDS)
-        return [Finding(CODE, "Verbo generalmente mal usado en diálogos: " ~ word)];
-
-    return [];
-}
-
-Finding[] overusedWord(in string word, in string[] words)
-{
-    auto CODE = "overused";
-    if (checkSettings.avoidCheck(CODE))
-        return [];
-
     Finding[] res;
 
-    foreach(ow; OVERUSED_WORDS) {
-        if (globMatch(word, ow))
-            res ~= Finding(CODE, "Palabra/verbo comodín: " ~ word);
+    if (!checkSettings.avoidCheck(Check.MISUSEDSAYWORD) && word in USUALLY_MISUSED_SAYWORDS)
+        res ~= Finding("misusedsayword",
+                "Verbo generalmente mal usado en diálogos: " ~ word);
+
+    if (!checkSettings.avoidCheck(Check.PEDANTICSAYWORD) && word in USUALLY_PEDANTIC_SAYWORDS)
+        res ~= Finding("pedanticsayword", "Verbo generalmente pedante en diálogos: " ~ word);
+
+    if (!checkSettings.avoidCheck(Check.OVERUSED)) {
+        foreach(ow; OVERUSED_WORDS) {
+            if (globMatch(word, ow))
+                res ~= Finding("overused", "Palabra/verbo comodín: " ~ word);
+        }
     }
 
     return res;
 }
 
-// FIXME: merge mente, contained and repetition
 enum MENTE_OLDWORDS = 100;
 enum CONTAINED_MIN_SIZE = 4;
 enum CONTAINED_OLDWORDS = 15;
 enum REPETITION_OLDWORDS = 50;
 
-Finding[] wordCompareMultiCheck(in string word, in string[] words)
+Finding[] proximityChecks(in string word, in string[] words)
 {
-    // FIXME: uuuuugly! move the predicates to functions
-    if (checkSettings.avoidChecks(["mente", "contained", "repetition"]))
+    if (checkSettings.avoidChecks([Check.MENTE, Check.CONTAINED, Check.REPETITION]))
         return [];
 
     Finding[] res;
@@ -161,7 +182,7 @@ Finding[] wordCompareMultiCheck(in string word, in string[] words)
     foreach_reverse(idx, oldword; words[$-maxPrev..$].enumerate(0)) {
         if (oldword == word) {
             // check: repetition
-            if (!checkSettings.avoidCheck("repetition") &&
+            if (!checkSettings.avoidCheck(Check.REPETITION) &&
                 (maxPrev - idx <= REPETITION_OLDWORDS))
             {
                 res ~= Finding("repetition",
@@ -171,7 +192,7 @@ Finding[] wordCompareMultiCheck(in string word, in string[] words)
 
         } else {
             // check: mente
-            if (!checkSettings.avoidCheck("mente") &&
+            if (!checkSettings.avoidCheck(Check.MENTE) &&
                 (maxPrev - idx <= MENTE_OLDWORDS) &&
                 word != "mente" && oldword != "mente" &&
                 endsWith(word, "mente") && endsWith(oldword, "mente"))
@@ -182,7 +203,7 @@ Finding[] wordCompareMultiCheck(in string word, in string[] words)
             }
 
             // check: contained
-            if (!checkSettings.avoidCheck("contained") &&
+            if (!checkSettings.avoidCheck(Check.CONTAINED) &&
                 (maxPrev - idx <= CONTAINED_OLDWORDS) &&
                 // FIXME: this length is not in graphemes...
                 (word.length >= CONTAINED_MIN_SIZE && oldword.length >= CONTAINED_MIN_SIZE) &&
@@ -201,7 +222,7 @@ Finding[] wordCompareMultiCheck(in string word, in string[] words)
 
 Finding[] clicheFind(in string word, in string[] words)
 {
-    auto CODE = "contained";
+    auto CODE = Check.CLICHE;
     if (checkSettings.avoidCheck(CODE))
         return [];
 
@@ -215,7 +236,7 @@ Finding[] clicheFind(in string word, in string[] words)
 
 Finding[] misusedVerbFind(in string word, in string[] words)
 {
-    auto CODE = "misusedverb";
+    auto CODE = Check.MISUSEDVERB;
     if (checkSettings.avoidCheck(CODE))
         return [];
 
@@ -226,7 +247,7 @@ Finding[] misusedVerbFind(in string word, in string[] words)
                 if (word == allowed)
                     return [];
 
-                return [Finding(CODE, "Verbo generalmente mal usado: " ~ word)];
+                return [Finding(check2str[CODE], "Verbo generalmente mal usado: " ~ word)];
             }
         }
     }
@@ -236,7 +257,7 @@ Finding[] misusedVerbFind(in string word, in string[] words)
 
 Finding[] misusedExpressionFind(in string word, in string[] words)
 {
-    auto CODE = "misusedexpression";
+    auto CODE = Check.MISUSEDEXPR;
     if (checkSettings.avoidCheck(CODE))
         return [];
 
@@ -246,7 +267,7 @@ Finding[] misusedExpressionFind(in string word, in string[] words)
 
 Finding[] calcoFind(in string word, in string[] words)
 {
-    auto CODE = "calco";
+    auto CODE = Check.CALCO;
     if (checkSettings.avoidCheck(CODE))
         return [];
 

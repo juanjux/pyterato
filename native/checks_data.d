@@ -2,9 +2,33 @@ module checks_data;
 
 import std.container.rbtree;
 
-// FIXME: use fnmatch for these
-// Initialized on static this()
-RedBlackTree!string COMMON_WORDS, USUALLY_PEDANTIC_SAYWORDS, USUALLY_MISUSED_SAYWORDS;
+immutable COMMON_WORDS = redBlackTree(
+        "el", "él", "lo", "la", "le", "los", "las",
+        "que", "qué", "cual", "cuál", "cuales", "como",
+        "cómo", "este", "éste", "esta", "esto", "ésta",
+        "ese", "esa", "eso", "esos", "aquel", "aquello",
+        "aquella", "y", "o", "ha", "han", "con", "sin",
+        "desde", "ya", "aquellos", "aquellas", "se", "de",
+        "un", "uno", "unos", "una", "unas", "con",
+        "ante", "ya", "para", "sin", "mas", "más", "habeis",
+        "serían", "sería", "en", "por", "mi", "mis",
+        "si", "sí", "no", "hasta", "su", "mi", "sus",
+        "tus", "sobre", "del", "a", "e", "pero", "había",
+        "habías", "habían", "habría", "habrías", "habrían",
+        "ser", "al", "sido", "haya", "otra", "me", "te",
+        "dijo", "dije", "preguntó", "pregunté", "ni", "les",
+        "hecho", "donde", "da", "dan", "das", "cuando",
+        "donde", "os", "vuestros", "vuestras",
+        "vosotros", "vosotras", "algo", "muy", "mas",
+        "menos", "entre", "tras", "aún", "hacia", "sea",
+        "sean", "soy", "eres", "es", "somos", "sois", "son", "era", "eras",
+        "érais", "eran", "seré", "serás", "será", "seréis",
+        "serán", "sido", "sería", "serías", "seríamos",
+        "seríais", "serían", "fui", "fuiste", "fue",
+        "fuimos", "fueron", "sé", "sed", "sean", "fuera",
+        "estaba", "estaban", "fueras", "fuera", "fuese",
+        "fueses", "fuesen", "siendo",
+        );
 
 // FIXME: change this so a rbtree can be used while keeping the globbing
 enum OVERUSED_WORDS = [
@@ -24,6 +48,19 @@ enum USUALLY_MISUSED_VERB_ROOTS = [
         ["mantuv*",],
         ["tamboril*", "tamborilero", "tamborilera", "tamborileros", "tamborileras"],
 ];
+
+immutable USUALLY_PEDANTIC_SAYWORDS = redBlackTree(
+        "rebuznó", "rugió", "rugí", "bramó", "bramé",
+        "declaró", "declaré", "inquirió", "inquirí", "sostuvo",
+        "sostuve", "refirió", "referí", "aseveró", "aseveré",
+        "arguyó", "argüí",
+        );
+
+immutable USUALLY_MISUSED_SAYWORDS = redBlackTree(
+        "comentó", "comenté", "interrogó", "interrogué", "amenazó",
+        "amenacé", "conminó", "conminé", "exhortó", "exhorté",
+        "aludió", "aludí",
+        );
 
 string[][] CLICHE_EXPRESSIONS = [
     ["a", "base", "de", "bien"],
@@ -3845,47 +3882,6 @@ static this()
 {
     import std.algorithm.mutation: reverse;
     import std.algorithm: min;
-
-    COMMON_WORDS = redBlackTree(
-            "el", "él", "lo", "la", "le", "los", "las",
-            "que", "qué", "cual", "cuál", "cuales", "como",
-            "cómo", "este", "éste", "esta", "esto", "ésta",
-            "ese", "esa", "eso", "esos", "aquel", "aquello",
-            "aquella", "y", "o", "ha", "han", "con", "sin",
-            "desde", "ya", "aquellos", "aquellas", "se", "de",
-            "un", "uno", "unos", "una", "unas", "con",
-            "ante", "ya", "para", "sin", "mas", "más", "habeis",
-            "serían", "sería", "en", "por", "mi", "mis",
-            "si", "sí", "no", "hasta", "su", "mi", "sus",
-            "tus", "sobre", "del", "a", "e", "pero", "había",
-            "habías", "habían", "habría", "habrías", "habrían",
-            "ser", "al", "sido", "haya", "otra", "me", "te",
-            "dijo", "dije", "preguntó", "pregunté", "ni", "les",
-            "hecho", "donde", "da", "dan", "das", "cuando",
-            "donde", "os", "vuestros", "vuestras",
-            "vosotros", "vosotras", "algo", "muy", "mas",
-            "menos", "entre", "tras", "aún", "hacia", "sea",
-            "sean", "soy", "eres", "es", "somos", "sois", "son", "era", "eras",
-            "érais", "eran", "seré", "serás", "será", "seréis",
-            "serán", "sido", "sería", "serías", "seríamos",
-            "seríais", "serían", "fui", "fuiste", "fue",
-            "fuimos", "fueron", "sé", "sed", "sean", "fuera",
-            "estaba", "estaban", "fueras", "fuera", "fuese",
-            "fueses", "fuesen", "siendo",
-            );
-
-    USUALLY_PEDANTIC_SAYWORDS = redBlackTree(
-        "rebuznó", "rugió", "rugí", "bramó", "bramé",
-        "declaró", "declaré", "inquirió", "inquirí", "sostuvo",
-        "sostuve", "refirió", "referí", "aseveró", "aseveré",
-        "arguyó", "argüí",
-    );
-
-    USUALLY_MISUSED_SAYWORDS = redBlackTree(
-        "comentó", "comenté", "interrogó", "interrogué", "amenazó",
-        "amenacé", "conminó", "conminé", "exhortó", "exhorté",
-        "aludió", "aludí",
-    );
 
     // Reverse the cliche expressions (they're more readable like they're written)
     // and create a dict grouping expressions by the first 6 letters of the first
