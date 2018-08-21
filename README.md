@@ -9,13 +9,16 @@ literarios en Español.
 
 ### Compilador de D
 
-XXX complete
+Pyterato implementa los chequeos en el lenguage de programación D. Ésto permite
+incrementar el rendimiento 24 veces más sobre el nativo en Python, de modo que 
+para poder instalarlo antes hay que tener el compilador de D, llamado "dmd" en 
+el sistema.
 
-```
-# git clone
-python setup.py build_ext -i --compiler=ldc2
-python setup.py install
-```
+Puedes descargar el compilador en esta web:
+
+https://dlang.org/download.html
+
+Después ya puedes instalar Pyterato con:
 
 ```
 pip3 install pyterato
