@@ -6,9 +6,10 @@ from pyterato.worditerator_base import BaseWordIterator
 
 class TxtFileWordIterator(BaseWordIterator):
     # FIXME: read by line, maybe using the file own (line) iterator
-    def __init__(self, fname: str) -> None:
+    def __init__(self) -> None:
         super().__init__()
 
+    def loadFile(self, fname: str) -> None:
         self.words_idx = 0
 
         if not fname:

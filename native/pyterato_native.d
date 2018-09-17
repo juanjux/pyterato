@@ -6,11 +6,70 @@ import pyd.pyd;
 
 import std.algorithm: min;
 import std.array: join;
+import std.stdio;
+import std.typecons: tuple, Tuple;
+
+class NativeFileException : Exception
+{
+    this(string msg, string file = __FILE__, size_t line = __LINE__) {
+        super(msg, file, line);
+    }
+}
 
 class NativeCheckException : Exception
 {
     this(string msg, string file = __FILE__, size_t line = __LINE__) {
         super(msg, file, line);
+    }
+}
+
+class StopIteration : Exception
+{
+    this(string file = __FILE__, size_t line = __LINE__) {
+        super("", file, line);
+    }
+}
+
+class TxtFileWordIterator
+{
+    private uint words_idx = 0;
+    string[] words;
+
+    void loadFile(string fname = "")
+    {
+        import std.file;
+        import std.array;
+
+        if (!exists(fname))
+            throw new NativeFileException("File not found");
+
+        words = split(readText(fname));
+    }
+
+    struct Range {
+        string[] words;
+        uint words_idx = 0;
+
+        this(string[] w) {
+            words = w;
+        }
+
+        @property bool empty() {
+            return words_idx >= words.length;
+        }
+
+        @property Tuple!(string, int) front() {
+            return tuple(words[words_idx], 0);
+        }
+
+        void popFront() {
+            words_idx++;
+        }
+    }
+
+    Range __iter__()
+    {
+        return Range(words);
     }
 }
 
@@ -96,5 +155,11 @@ extern(C) void PydMain() {
         Def!(Checker.enable_check, void function(string)),
         Def!(Checker.disable_check, void function(string)),
         Init!(uint),
+    )();
+
+    wrap_class!(
+        TxtFileWordIterator,
+        Def!(TxtFileWordIterator.loadFile, void function(string)),
+        Def!(TxtFileWordIterator.__iter__, TxtFileWordIterator.Range function()),
     )();
 }

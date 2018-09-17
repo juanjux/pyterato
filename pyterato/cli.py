@@ -110,6 +110,7 @@ def parse_arguments() -> argparse.Namespace:
 PROFILE = False
 
 def main() -> int:
+
     if PROFILE:
         import cProfile
         pr = cProfile.Profile()
@@ -125,7 +126,8 @@ def main() -> int:
         words = LibreOfficeWordIterator(paging=options.lo_paging)  # type: ignore
     else:
         from pyterato.worditerator_txtfile import TxtFileWordIterator
-        words = TxtFileWordIterator(options.file)  # type: ignore
+        words = native.TxtFileWordIterator()  # type: ignore
+        words.loadFile(options.file)  # type: ignore
 
     findings: OrderedDict[int, List[object]] = OrderedDict()
 
