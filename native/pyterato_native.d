@@ -82,6 +82,9 @@ class TxtFileWordIterator
 }
 
 // FIXME: should be a Singleton
+
+alias CheckerType = Finding[] function(in string, in string[]);
+
 class Checker
 {
     private string currentWord;
@@ -90,22 +93,21 @@ class Checker
     private bool[string] enabled;
     private string _SEPARATOR = "------------------------------";
     private uint _CONTEXT_SIZE = 6;
-    private Finding[] function(string, string[])[] checkers;
+    private CheckerType[] checkers;
 
     this(uint numwords = 2048)
     {
         import std.array: reserve;
+        import std.algorithm.searching: startsWith;
+        import std.traits;
 
         words.reserve(numwords);
 
-        checkers = [
-            &nonContextWordCheck,
-            &proximityChecks,
-            &clicheFind,
-            &misusedVerbFind,
-            &misusedExpressionFind,
-            &calcoFind,
-        ];
+        static foreach(m; __traits(allMembers, checks)) {
+            static if (m.startsWith("Check") && isFunction!(__traits(getMember, checks, m))) {
+                checkers ~= &(__traits(getMember, checks, m));
+            }
+        }
     }
 
     // FIXME: use compile time programming to inspect the checks.d module

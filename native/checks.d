@@ -143,7 +143,7 @@ Finding[] _checkExprList(Check code, in string word, in string[] words,
     return [];
 }
 
-Finding[] nonContextWordCheck(in string word, in string[] words)
+Finding[] CheckNonContextWord(in string word, in string[] words)
 {
     Finding[] res;
 
@@ -169,7 +169,7 @@ enum CONTAINED_MIN_SIZE = 4;
 enum CONTAINED_OLDWORDS = 15;
 enum REPETITION_OLDWORDS = 50;
 
-Finding[] proximityChecks(in string word, in string[] words)
+Finding[] CheckByProximity(in string word, in string[] words)
 {
     if (checkSettings.avoidChecks([Check.MENTE, Check.CONTAINED, Check.REPETITION]))
         return [];
@@ -220,7 +220,7 @@ Finding[] proximityChecks(in string word, in string[] words)
     return res;
 }
 
-Finding[] clicheFind(in string word, in string[] words)
+Finding[] CheckCliche(in string word, in string[] words)
 {
     auto CODE = Check.CLICHE;
     if (checkSettings.avoidCheck(CODE))
@@ -234,7 +234,7 @@ Finding[] clicheFind(in string word, in string[] words)
     return _checkExprList(CODE, word, words, *expr_list, "Expesión cliché: %s");
 }
 
-Finding[] misusedVerbFind(in string word, in string[] words)
+Finding[] CheckMisusedVerb(in string word, in string[] words)
 {
     auto CODE = Check.MISUSEDVERB;
     if (checkSettings.avoidCheck(CODE))
@@ -255,7 +255,7 @@ Finding[] misusedVerbFind(in string word, in string[] words)
     return [];
 }
 
-Finding[] misusedExpressionFind(in string word, in string[] words)
+Finding[] CheckMisusedExpression(in string word, in string[] words)
 {
     auto CODE = Check.MISUSEDEXPR;
     if (checkSettings.avoidCheck(CODE))
@@ -265,7 +265,7 @@ Finding[] misusedExpressionFind(in string word, in string[] words)
                          "Expresión generalmente mal usada: %s");
 }
 
-Finding[] calcoFind(in string word, in string[] words)
+Finding[] CheckCalco(in string word, in string[] words)
 {
     auto CODE = Check.CALCO;
     if (checkSettings.avoidCheck(CODE))

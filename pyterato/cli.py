@@ -10,17 +10,12 @@ import pyterato_native as native
 
 # TODO:
 # - Show the results in LibreOffice
-# - Factorize the looping over old words so it's only done once for every new word
-#   (checking if the index applies for every check).
 # - Add explanation and suggest replacements.
 # - Detect dialog markers (--) for the saywords checker.
 # - Detect verb conjugations.
-# - Check contained: normalize accents
 # - Check: intransitive verbs used as transitive (tamborilear).
 # - See if there is any way to optimize the word by word iteration while keeping the
-#   page number (the current method it's pretty slow on the LibreOffice side).
-# - Way to disable or enable checks individually using command line parameters or a
-#   config file.
+#   page number (the current method it's super slow on the LibreOffice side).
 
 SEPARATOR = '-' * 20
 
@@ -110,7 +105,6 @@ def parse_arguments() -> argparse.Namespace:
 PROFILE = False
 
 def main() -> int:
-
     if PROFILE:
         import cProfile
         pr = cProfile.Profile()
