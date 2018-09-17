@@ -119,7 +119,6 @@ def main() -> int:
         from pyterato.worditerator_lo import LibreOfficeWordIterator
         words = LibreOfficeWordIterator(paging=options.lo_paging)  # type: ignore
     else:
-        from pyterato.worditerator_txtfile import TxtFileWordIterator
         words = native.TxtFileWordIterator()  # type: ignore
         words.loadFile(options.file)  # type: ignore
 
