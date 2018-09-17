@@ -59,7 +59,12 @@ class TxtFileWordIterator
         }
 
         @property Tuple!(string, int) front() {
-            return tuple(words[words_idx], 0);
+            import std.algorithm: filter;
+            import std.uni: isAlpha;
+            import std.conv: to;
+
+            auto newword = words[words_idx].filter!(a => isAlpha(a)).to!string;
+            return tuple(newword, 0);
         }
 
         void popFront() {
