@@ -117,30 +117,26 @@ bool is_common(in string word)
 Finding[] _checkExprList(Check code, in string word, in string[] words,
                         in string[][] exprList, in string msgFormatStr)
 {
+    Finding[] res;
     foreach (expr; exprList) {
-        if (!globMatch(word, expr[0]) || expr.length > (words.length + 1)) {
+        if (expr.length > (words.length + 1))
             continue;
-        }
 
         // match: check the previous words in the expression
-        auto prevcount = 1;
-        bool fullMatch = true;
+        auto prevcount = 0;
 
-        foreach(exp_word; expr[1..$]) {
-            if (!globMatch(words[$-prevcount], exp_word)) {
-                fullMatch = false;
-                break;
+        foreach(exp_word; expr) {
+            if (!globMatch(words[$-prevcount], exp_word))
+                break; // no match before the end of the expression
+
+            if (++prevcount == expr.length) {
+                auto reversed = expr.dup;
+                res ~= Finding(check2str[code], format(msgFormatStr, join(reversed.reverse(), " ")));
             }
-            prevcount += 1;
-        }
-
-        if (fullMatch) {
-            auto reversed = expr.dup;
-            return [Finding(check2str[code], format(msgFormatStr, join(reversed.reverse(), " ")))];
         }
     }
 
-    return [];
+    return res;
 }
 
 Finding[] CheckNonContextWord(in string word, in string[] words)
@@ -231,7 +227,7 @@ Finding[] CheckCliche(in string word, in string[] words)
     if (expr_list is null)
         return [];
 
-    return _checkExprList(CODE, word, words, *expr_list, "Expesión cliché: %s");
+    return _checkExprList(CODE, word, words, *expr_list, "Expresión cliché: %s");
 }
 
 Finding[] CheckMisusedVerb(in string word, in string[] words)
