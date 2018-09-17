@@ -39,6 +39,9 @@ class TxtFileWordIterator
     {
         import std.file;
         import std.array;
+        import std.algorithm;
+        import std.uni: isAlpha;
+        import std.conv: to;
 
         if (!exists(fname))
             throw new NativeFileException("File not found");

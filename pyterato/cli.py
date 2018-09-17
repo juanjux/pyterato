@@ -4,7 +4,7 @@ import argparse
 import os
 import sys
 from collections import OrderedDict
-from typing import Iterable, List
+from typing import Iterable, List, Optional
 
 import pyterato_native as native
 
@@ -129,7 +129,7 @@ def main() -> int:
         words = native.TxtFileWordIterator()  # type: ignore
         words.loadFile(options.file)  # type: ignore
 
-    findings: OrderedDict[int, List[object]] = OrderedDict()
+    findings: OrderedDict[Optional[int], List[object]] = OrderedDict()
 
     checker = native.Checker()
 
@@ -153,8 +153,13 @@ def main() -> int:
     print_results(findings)
 
     if PROFILE:
+        import pstats, io
+
         pr.disable()
-        pr.print_stats(sort='time')
+        s = io.StringIO()
+        ps = pstats.Stats(pr, stream=s).sort_stats('time')
+        ps.print_stats()
+        print(s.getvalue())
 
     return 0
 
